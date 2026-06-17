@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Environment variables — NEVER commit these
+.env.local
+.env.*.local
+
+# Next.js build output
+.next/
+out/
+
+# Supabase
+.supabase/
+
+# OS files
+.DS_Store
+Thumbs.db
