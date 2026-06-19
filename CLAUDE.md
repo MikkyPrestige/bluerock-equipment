@@ -221,10 +221,12 @@ CREATE POLICY "machines_public_read" ON machines
    - Use `status` flags, `superseded_at` timestamps
    - Never `DELETE FROM` these tables
 
-5. **Puppeteer on Render Only**
-   - PDF generation never runs on Vercel
-   - Always call Render backend from Next.js API routes
-   - If you put Puppeteer in Vercel serverless, deployment fails
+5. **Puppeteer runs in Next.js API routes (not Render)**
+   - PDF generation runs directly inside `/api/pdf/*` routes using `puppeteer-core` + `@sparticuz/chromium-min`
+   - Shared utility: `src/lib/pdf.ts` exports `generatePDF(html)` and `escHtml()`
+   - Local dev: uses `C:\Program Files\Google\Chrome\Application\chrome.exe` (or `LOCAL_CHROME_PATH` env var)
+   - Production (Vercel): `@sparticuz/chromium-min` downloads the binary; set `CHROMIUM_PATH` or `CHROMIUM_DOWNLOAD_URL` env var on Vercel
+   - The Render backend (`server.js`) is NOT used for PDF generation
 
 6. **RLS Before Data**
    - Enable RLS on every table immediately after creation
