@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import GenerateReportButton from '@/components/admin/GenerateReportButton'
 
 export default async function AdminInventoryPage() {
     const supabase = await createClient()
@@ -64,12 +65,18 @@ export default async function AdminInventoryPage() {
                                         </td>
                                         <td className="px-4 py-3 text-gray-600">{machine.yard_city}, {machine.yard_country}</td>
                                         <td className="px-4 py-3">
-                                            <Link
-                                                href={`/admin/inventory/${machine.id}/edit`}
-                                                className="text-blue-700 hover:underline text-sm font-medium"
-                                            >
-                                                Edit
-                                            </Link>
+                                            <div className="flex items-center gap-4">
+                                                <Link
+                                                    href={`/admin/inventory/${machine.id}/edit`}
+                                                    className="text-blue-700 hover:underline text-sm font-medium"
+                                                >
+                                                    Edit
+                                                </Link>
+                                                <GenerateReportButton
+                                                    machineId={machine.id}
+                                                    hasReport={!!machine.inspection_report_url}
+                                                />
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
