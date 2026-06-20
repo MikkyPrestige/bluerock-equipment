@@ -25,6 +25,9 @@ export const metadata: Metadata = {
     description: 'Inspected, documented, and ready to ship. Buy direct with a 48-hour price lock.',
     type: 'website',
   },
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export const viewport: Viewport = {
