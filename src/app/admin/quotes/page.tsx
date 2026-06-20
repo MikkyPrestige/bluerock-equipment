@@ -39,6 +39,7 @@ export default async function AdminQuotesPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -100,6 +101,7 @@ export default async function AdminQuotesPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </main>

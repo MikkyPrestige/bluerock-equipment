@@ -72,6 +72,7 @@ export default async function AdminBuyersPage() {
             All Buyers ({buyers?.length ?? 0})
           </h2>
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -110,6 +111,7 @@ export default async function AdminBuyersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
@@ -140,6 +142,7 @@ export default async function AdminBuyersPage() {
                   These buyers saved machines that are now held or sold. Use &ldquo;Notify&rdquo; to email them when a similar machine is available.
                 </p>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
@@ -202,6 +205,7 @@ export default async function AdminBuyersPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>

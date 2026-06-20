@@ -6,6 +6,7 @@ import QuoteRequestButton from '@/components/machine/QuoteRequestButton'
 import WatchlistButton from '@/components/machine/WatchlistButton'
 import CompareToggle from '@/components/machine/CompareToggle'
 import ConfidenceBadges from '@/components/trust/ConfidenceBadges'
+import CalendlyButton from '@/components/trust/CalendlyButton'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
 
 const wearColors: Record<string, string> = {
@@ -106,7 +107,7 @@ export default async function MachineDetailPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div className="bg-gray-50 rounded-md px-4 py-3">
               <p className="text-xs text-gray-500">Engine Hours</p>
               <p className="text-sm font-bold text-gray-900">{m.engine_hours.toLocaleString()} hrs</p>
@@ -204,6 +205,15 @@ export default async function MachineDetailPage({
           ) : (
             <p className="text-sm text-gray-400">Inspection report pending generation.</p>
           )}
+        </div>
+
+        {/* Live Walkthrough Scheduler */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">Book a Live Video Walkthrough</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            See the machine running in the yard. A 30-minute video call with our technical team — ask any question before you commit.
+          </p>
+          <CalendlyButton machineName={`${m.year} ${m.brand} ${m.model}`} />
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">

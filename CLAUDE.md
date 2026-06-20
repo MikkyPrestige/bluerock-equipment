@@ -12,7 +12,7 @@ Master configuration file for all Claude sessions. Contains architectural review
 **Model:** Single-seller, closed-group (max 10 users), $0 infrastructure
 **Target Markets:** West Africa, Middle East, Southeast Asia, Americas, Europe
 **Stack:** Next.js 16.2.9 · Supabase · Render · Resend · Puppeteer · Calendly
-**Status:** Sprints 1–4 complete, Sprint 5 ready to begin
+**Status:** All 8 Sprints Complete — Ready for Launch
 
 ---
 
@@ -247,12 +247,50 @@ CREATE POLICY "machines_public_read" ON machines
 | 2 | Authentication & Buyer Accounts | ✅ Complete |
 | 3 | Machine Inventory | ✅ Complete |
 | 4 | PDF Generation (Puppeteer) | ✅ Complete |
-| 5 | Quote Flow & Transaction Pipeline | 🔲 Ready |
-| 6 | Document Vault & Milestone Tracker | 🔲 Queued |
-| 7 | Watchlist, Comparison & Buyer Dashboard | 🔲 Queued |
-| 8 | Trust Hub, Walkthrough & Launch Prep | 🔲 Queued |
+| 5 | Quote Flow & Transaction Pipeline | ✅ Complete |
+| 6 | Document Vault & Milestone Tracker | ✅ Complete |
+| 7 | Watchlist, Comparison & Buyer Dashboard | ✅ Complete |
+| 8 | Trust Hub, Walkthrough & Launch Prep | ✅ Complete |
 
 **Rule:** Do not start Sprint N+1 until Sprint N exit criteria are met.
+
+---
+
+## LAUNCH CHECKLIST (Pre-Go-Live)
+
+### Vercel (Frontend)
+- [ ] Set `RESEND_API_KEY` env var in Vercel dashboard
+- [ ] Set `CHROMIUM_PATH` or `CHROMIUM_DOWNLOAD_URL` env var in Vercel (for PDF generation)
+- [ ] Verify `ADMIN_EMAIL` matches the admin Supabase auth account
+- [ ] Verify `NEXT_PUBLIC_CALENDLY_URL` is set and points to the live Calendly event
+- [ ] Verify `NEXT_PUBLIC_BACKEND_URL` points to `https://bluerock-equipment.onrender.com`
+
+### Render (Backend)
+- [ ] Install Chromium on Render (build command: `apt-get install -y chromium-browser && npm install`)
+- [ ] Set `CHROMIUM_PATH=/usr/bin/chromium-browser` env var on Render
+- [ ] Set `NODE_ENV=production` env var on Render
+- [ ] Set `ALLOWED_ORIGIN=https://bluerock-equipment.vercel.app` on Render
+- [ ] Verify `/health` endpoint returns `{ "status": "ok" }`
+
+### Resend (Email)
+- [ ] Verify domain `bluerockequipment.com` in Resend dashboard (takes 48 hours DNS propagation)
+- [ ] Test a notification send from `/admin/buyers` → Notify button
+- [ ] Confirm "from" address matches verified domain
+
+### Supabase
+- [ ] Confirm RLS is enabled on all 7 tables
+- [ ] Confirm `inspection-reports` bucket is PUBLIC
+- [ ] Confirm `documents` bucket is PRIVATE
+- [ ] Confirm `machine-media` bucket is PUBLIC
+- [ ] Seed at least 3 machines with complete wear_analysis data
+
+### Security Audit (Passed)
+- ✅ `SUPABASE_SERVICE_ROLE_KEY` only used in `src/lib/supabase/admin.ts` — never in client components
+- ✅ All admin API routes check `user.email === process.env.ADMIN_EMAIL`
+- ✅ Buyer API routes verify `quote.buyer_id === user.id` before returning data
+- ✅ Document downloads verify ownership before generating signed URLs
+- ✅ PDF API routes (`/api/pdf/*`) run server-side only — no client-side Puppeteer
+- ✅ Render backend CORS restricted to Vercel frontend origin
 
 ---
 

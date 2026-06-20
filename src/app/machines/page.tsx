@@ -55,9 +55,23 @@ export default async function MachinesPage({
                 </div>
             </header>
 
+            {/* Trust Banner */}
+            <div className="bg-blue-700 px-6 py-2">
+                <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 sm:gap-8 text-xs text-blue-100 font-medium">
+                    <span>✓ 150-Point Inspected</span>
+                    <span className="hidden sm:inline text-blue-400">|</span>
+                    <span className="hidden sm:inline">Direct Seller — No Broker</span>
+                    <span className="hidden sm:inline text-blue-400">|</span>
+                    <span className="hidden sm:inline">48-Hour Price Lock</span>
+                    <span className="hidden sm:inline text-blue-400">|</span>
+                    <Link href="/trust" className="text-blue-200 hover:text-white underline hidden sm:inline">Trust Hub →</Link>
+                </div>
+            </div>
+
             {/* Filter Bar */}
-            <div className="bg-white border-b border-gray-200 px-6 py-3">
-                <div className="max-w-7xl mx-auto flex flex-wrap gap-3 items-center">
+            <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
+                <div className="max-w-7xl mx-auto overflow-x-auto">
+                <div className="flex flex-wrap gap-2 items-center min-w-max sm:min-w-0 pb-1 sm:pb-0">
                     <span className="text-sm font-medium text-gray-600">Filter:</span>
 
                     {/* Category */}
@@ -104,6 +118,7 @@ export default async function MachinesPage({
                             </Link>
                         ))}
                     </div>
+                </div>
                 </div>
             </div>
 
