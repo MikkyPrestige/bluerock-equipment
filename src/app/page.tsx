@@ -12,24 +12,24 @@ import compactorImg from '@/assests/img/machinery/yard-operations-aerial-storage
 
 const STATS = [
   { value: '150-Point', label: 'Yard Inspection' },
-  { value: '48-Hour',   label: 'Price Lock' },
-  { value: '6-Phase',   label: 'Milestone Tracker' },
-  { value: '100%',      label: 'Direct — No Brokers' },
+  { value: '48-Hour', label: 'Price Lock' },
+  { value: '6-Phase', label: 'Milestone Tracker' },
+  { value: '100%', label: 'Direct — No Brokers' },
 ]
 
 const CATEGORIES = [
-  { name: 'Excavators',        slug: 'Excavator',        image: excImg,      desc: 'Mining, quarry & civil works' },
-  { name: 'Bulldozers',        slug: 'Bulldozer',        image: bullImg,     desc: 'Earthmoving & land clearing' },
-  { name: 'Wheel Loaders',     slug: 'Wheel Loader',     image: loaderImg,   desc: 'Material handling & loading' },
-  { name: 'Motor Graders',     slug: 'Motor Grader',     image: graderImg,   desc: 'Road grading & leveling' },
-  { name: 'Articulated Trucks',slug: 'Articulated Truck',image: truckImg,    desc: 'Heavy haulage & site transport' },
-  { name: 'Compactors',        slug: 'Compactor',        image: compactorImg,desc: 'Soil & asphalt compaction' },
+  { name: 'Excavators', slug: 'Excavator', image: excImg, desc: 'Mining, quarry & civil works' },
+  { name: 'Bulldozers', slug: 'Bulldozer', image: bullImg, desc: 'Earthmoving & land clearing' },
+  { name: 'Wheel Loaders', slug: 'Wheel Loader', image: loaderImg, desc: 'Material handling & loading' },
+  { name: 'Motor Graders', slug: 'Motor Grader', image: graderImg, desc: 'Road grading & leveling' },
+  { name: 'Articulated Trucks', slug: 'Articulated Truck', image: truckImg, desc: 'Heavy haulage & site transport' },
+  { name: 'Compactors', slug: 'Compactor', image: compactorImg, desc: 'Soil & asphalt compaction' },
 ]
 
 const HOW_IT_WORKS = [
-  { step: 1, title: 'Browse & Save',     body: 'Filter inventory by category, brand, and use case. Save machines to your watchlist.' },
-  { step: 2, title: 'Request a Quote',   body: 'Submit a quote request with your port of discharge. Receive a proforma invoice within 24 hours.' },
-  { step: 3, title: 'Review & Confirm',  body: 'Accept the proforma, confirm terms, and transfer payment via wire or letter of credit.' },
+  { step: 1, title: 'Browse & Save', body: 'Filter inventory by category, brand, and use case. Save machines to your watchlist.' },
+  { step: 2, title: 'Request a Quote', body: 'Submit a quote request with your port of discharge. Receive a proforma invoice within 24 hours.' },
+  { step: 3, title: 'Review & Confirm', body: 'Accept the proforma, confirm terms, and transfer payment via wire or letter of credit.' },
   { step: 4, title: 'Export & Delivery', body: 'We handle the full export documentation package — B/L, export certificate, customs manifest, packing list.' },
 ]
 
@@ -151,7 +151,7 @@ export default function HomePage() {
               Built for Every Job Site
             </h2>
             <p className="text-white/40 text-base max-w-xl mx-auto leading-relaxed">
-              Available for immediate export to West Africa, Middle East, Southeast Asia, and the Americas.
+              Available for immediate export to Europe, Africa, Middle East, Asia, and the Americas.
             </p>
           </div>
 
@@ -265,8 +265,7 @@ export default function HomePage() {
             Ready to find your machine?
           </h2>
           <p className="text-white/45 text-base mb-9 leading-relaxed">
-            Sign up to request quotes, track shipments, and access your Document Vault.
-            Max 10 verified buyers — currently accepting applications.
+            Sign up to request quotes, track shipments, and access your Document Vault. Currently accepting applications.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
