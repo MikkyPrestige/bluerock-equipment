@@ -49,26 +49,41 @@ export default function ComparisonTray() {
   if (!loaded || items.length === 0) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 text-white shadow-2xl border-t border-gray-700">
-      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-4">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">
-          Compare ({items.length}/3)
-        </span>
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-navy-900/96 backdrop-blur-md border-t border-white/10 shadow-2xl shadow-black/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center gap-4">
 
-        <div className="flex-1 flex items-center gap-3 overflow-x-auto">
+        {/* Label */}
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <div className="w-2 h-2 rounded-full bg-gold-400 animate-pulse" />
+          <span className="text-xs font-bold uppercase tracking-widest text-white/50">
+            Compare{' '}
+            <span className="text-gold-400">{items.length}</span>
+            <span className="text-white/30">/3</span>
+          </span>
+        </div>
+
+        {/* Machine chips */}
+        <div className="flex-1 flex items-center gap-2.5 overflow-x-auto scrollbar-hide">
           {items.map(item => {
             const m = item.machines
             return (
-              <div key={item.machine_id} className="flex items-center gap-2 bg-gray-800 rounded-md px-3 py-1.5 flex-shrink-0">
-                <span className="text-sm font-medium text-white">
-                  {m ? `${m.year} ${m.brand} ${m.model}` : item.machine_id.substring(0, 8)}
-                </span>
-                {m && (
-                  <span className="text-xs text-gray-400">${Number(m.price_usd).toLocaleString()}</span>
-                )}
+              <div
+                key={item.machine_id}
+                className="flex items-center gap-2.5 bg-navy-800 border border-white/10 rounded-lg px-3 py-2 flex-shrink-0 min-w-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-white text-xs font-semibold leading-tight truncate max-w-[140px]">
+                    {m ? `${m.year} ${m.brand} ${m.model}` : item.machine_id.slice(0, 8)}
+                  </p>
+                  {m && (
+                    <p className="text-gold-400 text-[10px] font-medium">
+                      ${Number(m.price_usd).toLocaleString()}
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={() => remove(item.machine_id)}
-                  className="text-gray-500 hover:text-white ml-1 text-base leading-none"
+                  className="text-white/25 hover:text-white/70 ml-0.5 transition-colors leading-none text-base flex-shrink-0"
                   title="Remove"
                 >
                   &times;
@@ -76,13 +91,18 @@ export default function ComparisonTray() {
               </div>
             )
           })}
+
+          {/* Empty slots */}
+          {Array.from({ length: Math.max(0, 3 - items.length) }).map((_, i) => (
+            <div key={i} className="w-28 h-10 rounded-lg border border-dashed border-white/10 flex-shrink-0" />
+          ))}
         </div>
 
         <Link
           href="/comparison"
-          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2 rounded-md whitespace-nowrap flex-shrink-0"
+          className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-6 py-2.5 rounded-lg whitespace-nowrap flex-shrink-0 transition-colors duration-150 shadow-lg shadow-black/30"
         >
-          View Comparison
+          Compare Now
         </Link>
       </div>
     </div>

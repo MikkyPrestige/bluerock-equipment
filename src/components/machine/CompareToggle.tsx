@@ -41,16 +41,16 @@ export default function CompareToggle({
         onClick={toggle}
         disabled={loading}
         title={active ? 'Remove from comparison tray' : 'Add to comparison tray'}
-        className={`text-xs font-medium px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50 ${
+        className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all duration-150 disabled:opacity-40 ${
           active
-            ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-700'
-            : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500 hover:text-gray-900'
+            ? 'bg-navy-700 border-white/25 text-white hover:bg-navy-800'
+            : 'bg-white/5 border-white/15 text-white/50 hover:text-white/80 hover:border-white/30'
         }`}
       >
-        {loading ? '…' : active ? 'In Tray' : 'Compare'}
+        {loading ? '…' : active ? '✓ In Tray' : '+ Compare'}
       </button>
       {limitHit && (
-        <span className="text-xs text-red-600 mt-0.5">Tray full (max 3)</span>
+        <span className="text-[10px] text-red-400 mt-1">Tray full (max 3)</span>
       )}
     </div>
   )

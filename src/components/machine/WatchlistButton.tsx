@@ -16,10 +16,9 @@ export default function WatchlistButton({
     e.preventDefault()
     e.stopPropagation()
     setLoading(true)
-    const method = saved ? 'DELETE' : 'POST'
     try {
       await fetch('/api/watchlist', {
-        method,
+        method: saved ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ machine_id: machineId }),
         credentials: 'include',
@@ -35,13 +34,13 @@ export default function WatchlistButton({
       onClick={toggle}
       disabled={loading}
       title={saved ? 'Remove from watchlist' : 'Save to watchlist'}
-      className={`text-xs font-medium px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50 ${
+      className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-all duration-150 disabled:opacity-40 ${
         saved
-          ? 'bg-blue-700 text-white border-blue-700 hover:bg-blue-800'
-          : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-700'
+          ? 'bg-gold-400/15 border-gold-400/40 text-gold-400 hover:bg-gold-400/25'
+          : 'bg-white/5 border-white/15 text-white/50 hover:text-white/80 hover:border-white/30'
       }`}
     >
-      {loading ? '…' : saved ? 'Saved' : 'Save'}
+      {loading ? '…' : saved ? '♥ Saved' : '♡ Save'}
     </button>
   )
 }

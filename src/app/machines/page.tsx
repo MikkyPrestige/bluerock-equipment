@@ -5,155 +5,370 @@ import ComparisonTray from '@/components/comparison/ComparisonTray'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
+import heroImg from '@/assests/img/machinery/machine-detail-excavator-urban-site.jpg'
 
 const CATEGORIES = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
-const BRANDS = ['Caterpillar', 'Komatsu', 'Volvo', 'Sany', 'Hitachi', 'Liebherr']
+const BRANDS    = ['Caterpillar', 'Komatsu', 'Volvo', 'Sany', 'Hitachi', 'Liebherr']
 const USE_CASES = ['Construction', 'Mining & Quarrying', 'Port Operations', 'Agriculture', 'Road Building']
 
+/* Inline SVG icons for each category filter pill */
+const CAT_ICONS: Record<string, React.ReactElement> = {
+  All: (
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+      <rect x="1" y="1" width="6" height="6" rx="1" />
+      <rect x="9" y="1" width="6" height="6" rx="1" />
+      <rect x="1" y="9" width="6" height="6" rx="1" />
+      <rect x="9" y="9" width="6" height="6" rx="1" />
+    </svg>
+  ),
+  Excavator: (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 16 L2 9 L6 9" />
+      <path d="M6 9 L12 4" />
+      <path d="M12 4 L17 8 L14 13 L9 10 Z" />
+      <path d="M2 16 L18 16" />
+    </svg>
+  ),
+  Bulldozer: (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="10" width="14" height="5" rx="1" />
+      <path d="M3 10 L5 6 L15 6 L17 10" />
+      <path d="M1 8 L4 5 L4 10" />
+    </svg>
+  ),
+  'Wheel Loader': (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="14" r="3" />
+      <circle cx="14" cy="14" r="3" />
+      <path d="M5 11 L8 11 L8 6 L11 4 L14 6 L14 11" />
+    </svg>
+  ),
+  'Motor Grader': (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 15 L19 15" />
+      <path d="M3 10 L17 12" />
+      <rect x="6" y="5" width="8" height="5" rx="1" />
+      <circle cx="4" cy="15" r="2" />
+      <circle cx="16" cy="15" r="2" />
+    </svg>
+  ),
+  'Articulated Truck': (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="7" width="8" height="7" rx="1" />
+      <rect x="10" y="5" width="9" height="9" rx="1" />
+      <circle cx="3" cy="16" r="2" />
+      <circle cx="12" cy="16" r="2" />
+      <circle cx="17" cy="16" r="2" />
+    </svg>
+  ),
+  Compactor: (
+    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="10" width="16" height="6" rx="3" />
+      <path d="M5 10 L5 5 L15 5 L15 10" />
+      <path d="M8 5 L8 3 L12 3 L12 5" />
+    </svg>
+  ),
+}
+
+/* Build a /machines URL preserving current params + applying overrides.
+   Pass null to remove a param. */
+function buildHref(
+  current: { category?: string; brand?: string; use_case?: string; view?: string },
+  overrides: Partial<{ category: string | null; brand: string | null; use_case: string | null; view: string | null }>
+): string {
+  const next: Record<string, string> = {}
+  if (current.category)  next.category  = current.category
+  if (current.brand)     next.brand     = current.brand
+  if (current.use_case)  next.use_case  = current.use_case
+  if (current.view)      next.view      = current.view
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v == null) { delete next[k] } else { next[k] = v }
+  }
+  const qs = Object.entries(next)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&')
+  return `/machines${qs ? '?' + qs : ''}`
+}
+
 export default async function MachinesPage({
-    searchParams,
+  searchParams,
 }: {
-    searchParams: Promise<{ category?: string; brand?: string; use_case?: string }>
+  searchParams: Promise<{ category?: string; brand?: string; use_case?: string; view?: string }>
 }) {
-    const supabase = await createClient()
-    const params = await searchParams
+  const supabase = await createClient()
+  const params = await searchParams
 
-    const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
-    let query = supabase
-        .from('machines')
-        .select('*')
-        .order('created_at', { ascending: false })
+  let query = supabase
+    .from('machines')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-    if (params.category) query = query.eq('category', params.category)
-    if (params.brand) query = query.eq('brand', params.brand)
-    if (params.use_case) query = query.eq('use_case', params.use_case)
+  if (params.category) query = query.eq('category', params.category)
+  if (params.brand)    query = query.eq('brand', params.brand)
+  if (params.use_case) query = query.eq('use_case', params.use_case)
 
-    const { data: machines, error } = await query
+  const { data: machines, error } = await query
 
-    if (error) return <div className="p-8 text-red-600">Error loading machines: {error.message}</div>
-
-    // Fetch watchlist state for the current buyer (if logged in)
-    let watchlistedIds = new Set<string>()
-    let comparisonIds = new Set<string>()
-    if (user) {
-        const { data: wl } = await adminSupabase
-            .from('watchlist')
-            .select('machine_id, in_comparison')
-            .eq('buyer_id', user.id)
-        for (const w of wl ?? []) {
-            watchlistedIds.add(w.machine_id)
-            if (w.in_comparison) comparisonIds.add(w.machine_id)
-        }
-    }
-
+  if (error) {
     return (
-        <div className="min-h-screen bg-gray-50">
-            <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <Link href="/">
-                  <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain" />
-                </Link>
-                <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-900">Dashboard</Link>
-                    <Link href="/auth/login" className="text-sm bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800">Sign in</Link>
-                </div>
-            </header>
-
-            {/* Trust Banner */}
-            <div className="bg-blue-700 px-6 py-2">
-                <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 sm:gap-8 text-xs text-blue-100 font-medium">
-                    <span>✓ 150-Point Inspected</span>
-                    <span className="hidden sm:inline text-blue-400">|</span>
-                    <span className="hidden sm:inline">Direct Seller — No Broker</span>
-                    <span className="hidden sm:inline text-blue-400">|</span>
-                    <span className="hidden sm:inline">48-Hour Price Lock</span>
-                    <span className="hidden sm:inline text-blue-400">|</span>
-                    <Link href="/trust" className="text-blue-200 hover:text-white underline hidden sm:inline">Trust Hub →</Link>
-                </div>
-            </div>
-
-            {/* Filter Bar */}
-            <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
-                <div className="max-w-7xl mx-auto overflow-x-auto">
-                <div className="flex flex-wrap gap-2 items-center min-w-max sm:min-w-0 pb-1 sm:pb-0">
-                    <span className="text-sm font-medium text-gray-600">Filter:</span>
-
-                    {/* Category */}
-                    <div className="flex gap-2 flex-wrap">
-                        <Link
-                            href="/machines"
-                            className={`text-xs px-3 py-1 rounded-full border font-medium ${!params.category && !params.brand && !params.use_case ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
-                        >
-                            All
-                        </Link>
-                        {CATEGORIES.map(cat => (
-                            <Link
-                                key={cat}
-                                href={`/machines?category=${encodeURIComponent(cat)}${params.brand ? `&brand=${encodeURIComponent(params.brand)}` : ''}${params.use_case ? `&use_case=${encodeURIComponent(params.use_case)}` : ''}`}
-                                className={`text-xs px-3 py-1 rounded-full border font-medium ${params.category === cat ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
-                            >
-                                {cat}
-                            </Link>
-                        ))}
-                    </div>
-
-                    {/* Brand */}
-                    <div className="flex gap-2 flex-wrap">
-                        {BRANDS.map(brand => (
-                            <Link
-                                key={brand}
-                                href={`/machines?brand=${encodeURIComponent(brand)}${params.category ? `&category=${encodeURIComponent(params.category)}` : ''}${params.use_case ? `&use_case=${encodeURIComponent(params.use_case)}` : ''}`}
-                                className={`text-xs px-3 py-1 rounded-full border font-medium ${params.brand === brand ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
-                            >
-                                {brand}
-                            </Link>
-                        ))}
-                    </div>
-
-                    {/* Use Case */}
-                    <div className="flex gap-2 flex-wrap">
-                        {USE_CASES.map(uc => (
-                            <Link
-                                key={uc}
-                                href={`/machines?use_case=${encodeURIComponent(uc)}${params.category ? `&category=${encodeURIComponent(params.category)}` : ''}${params.brand ? `&brand=${encodeURIComponent(params.brand)}` : ''}`}
-                                className={`text-xs px-3 py-1 rounded-full border font-medium ${params.use_case === uc ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
-                            >
-                                {uc}
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-                </div>
-            </div>
-
-            {/* Inventory Grid */}
-            <main className="max-w-7xl mx-auto px-6 py-8">
-                {!machines || machines.length === 0 ? (
-                    <div className="text-center py-24">
-                        <p className="text-gray-400 text-sm">No machines found matching your filters.</p>
-                        <Link href="/machines" className="mt-4 inline-block text-blue-700 text-sm font-medium hover:underline">
-                            Clear filters
-                        </Link>
-                    </div>
-                ) : (
-                    <>
-                        <p className="text-sm text-gray-500 mb-6">{machines.length} machine{machines.length !== 1 ? 's' : ''} available</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {machines.map(machine => (
-                                <MachineCard
-                                    key={machine.id}
-                                    machine={machine}
-                                    isWatchlisted={watchlistedIds.has(machine.id)}
-                                    isInComparison={comparisonIds.has(machine.id)}
-                                    showActions={!!user}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
-            </main>
-
-            {user && <ComparisonTray />}
-        </div>
+      <div className="min-h-screen bg-navy-950 flex items-center justify-center p-8">
+        <p className="text-red-400 text-sm">Error loading machines: {error.message}</p>
+      </div>
     )
+  }
+
+  let watchlistedIds = new Set<string>()
+  let comparisonIds  = new Set<string>()
+  if (user) {
+    const { data: wl } = await adminSupabase
+      .from('watchlist')
+      .select('machine_id, in_comparison')
+      .eq('buyer_id', user.id)
+    for (const w of wl ?? []) {
+      watchlistedIds.add(w.machine_id)
+      if (w.in_comparison) comparisonIds.add(w.machine_id)
+    }
+  }
+
+  const isListView = params.view === 'list'
+  const hasFilters = !!(params.category || params.brand || params.use_case)
+  const count = machines?.length ?? 0
+
+  /* Pill class helper */
+  const pill = (active: boolean) =>
+    `flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border transition-all duration-150 whitespace-nowrap select-none ${
+      active
+        ? 'bg-gold-400/15 border-gold-400/55 text-gold-300'
+        : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70 hover:border-white/25'
+    }`
+
+  return (
+    <div className="min-h-screen bg-navy-950 flex flex-col">
+
+      {/* ── STICKY NAV + FILTER WRAPPER ── */}
+      <div className="sticky top-0 z-50">
+
+        {/* Nav */}
+        <header className="bg-navy-950/96 backdrop-blur-md border-b border-white/8 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain invert opacity-90" />
+            </Link>
+            <span className="hidden sm:inline text-xs text-gold-400 font-semibold uppercase tracking-widest">
+              Fleet Inventory
+            </span>
+          </div>
+          <div className="flex items-center gap-5">
+            <Link href="/trust" className="text-sm text-white/45 hover:text-white hidden sm:block transition-colors duration-150">
+              Trust Hub
+            </Link>
+            {user ? (
+              <Link href="/dashboard" className="text-sm text-white/45 hover:text-white transition-colors duration-150">
+                Dashboard
+              </Link>
+            ) : (
+              <Link href="/auth/login" className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-4 py-2 rounded transition-colors duration-150 shadow-md shadow-black/30">
+                Sign In
+              </Link>
+            )}
+          </div>
+        </header>
+
+        {/* Filter Bar */}
+        <div className="bg-navy-900/96 backdrop-blur-md border-b border-white/8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-2">
+
+            {/* Scrollable pills */}
+            <div className="flex-1 overflow-x-auto scrollbar-hide">
+              <div className="flex items-center gap-1.5 py-3 min-w-max pr-2">
+
+                {/* All */}
+                <Link href={buildHref(params, { category: null, brand: null, use_case: null })} className={pill(!hasFilters)}>
+                  {CAT_ICONS.All}
+                  All
+                </Link>
+
+                <div className="w-px h-4 bg-white/10 mx-1 flex-shrink-0" />
+
+                {/* Categories */}
+                {CATEGORIES.map(cat => (
+                  <Link
+                    key={cat}
+                    href={buildHref(params, { category: params.category === cat ? null : cat })}
+                    className={pill(params.category === cat)}
+                  >
+                    {CAT_ICONS[cat]}
+                    {cat}
+                  </Link>
+                ))}
+
+                <div className="w-px h-4 bg-white/10 mx-1 flex-shrink-0" />
+
+                {/* Brands */}
+                {BRANDS.map(brand => (
+                  <Link
+                    key={brand}
+                    href={buildHref(params, { brand: params.brand === brand ? null : brand })}
+                    className={pill(params.brand === brand)}
+                  >
+                    {brand}
+                  </Link>
+                ))}
+
+                <div className="w-px h-4 bg-white/10 mx-1 flex-shrink-0" />
+
+                {/* Use Cases */}
+                {USE_CASES.map(uc => (
+                  <Link
+                    key={uc}
+                    href={buildHref(params, { use_case: params.use_case === uc ? null : uc })}
+                    className={pill(params.use_case === uc)}
+                  >
+                    {uc}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex-shrink-0 border-l border-white/10 pl-3 py-3 flex items-center gap-0.5">
+              <Link
+                href={buildHref(params, { view: null })}
+                title="Grid view"
+                className={`p-2 rounded-lg transition-colors duration-150 ${!isListView ? 'text-gold-400 bg-gold-400/10' : 'text-white/30 hover:text-white/60'}`}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <rect x="1" y="1" width="6" height="6" rx="1" />
+                  <rect x="9" y="1" width="6" height="6" rx="1" />
+                  <rect x="1" y="9" width="6" height="6" rx="1" />
+                  <rect x="9" y="9" width="6" height="6" rx="1" />
+                </svg>
+              </Link>
+              <Link
+                href={buildHref(params, { view: 'list' })}
+                title="List view"
+                className={`p-2 rounded-lg transition-colors duration-150 ${isListView ? 'text-gold-400 bg-gold-400/10' : 'text-white/30 hover:text-white/60'}`}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <rect x="1" y="2"    width="14" height="2.5" rx="1" />
+                  <rect x="1" y="6.75" width="14" height="2.5" rx="1" />
+                  <rect x="1" y="11.5" width="14" height="2.5" rx="1" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── HERO ── */}
+      <section className="relative h-52 sm:h-60 overflow-hidden flex-shrink-0">
+        <Image
+          src={heroImg}
+          alt="Construction excavator with workers on an active urban job site"
+          fill
+          className="object-cover object-center"
+          priority
+          quality={85}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy-950/55 via-navy-950/25 to-navy-950/85" />
+        <div className="absolute inset-0 bg-gradient-to-r from-navy-950/45 to-transparent" />
+        <div className="relative z-10 h-full flex flex-col justify-end px-6 sm:px-8 pb-8 max-w-7xl mx-auto w-full">
+          <p className="text-xs text-gold-400 font-semibold uppercase tracking-widest mb-2">Fleet Inventory</p>
+          <h1 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight">
+            Browse Our Fleet
+          </h1>
+        </div>
+      </section>
+
+      {/* ── MAIN CONTENT ── */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
+
+        {/* Stats + active filter summary */}
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mb-7">
+          <p className="text-white text-sm">
+            <span className="font-semibold">{count}</span>
+            <span className="text-white/35"> machine{count !== 1 ? 's' : ''} available</span>
+          </p>
+          <span className="text-white/15 hidden sm:inline">|</span>
+          <p className="text-white/35 text-sm hidden sm:block">Updated today</p>
+          <span className="text-white/15 hidden sm:inline">|</span>
+          <p className="text-sm text-gold-500 font-medium">✓ Ready to ship</p>
+          {hasFilters && (
+            <>
+              <span className="text-white/15">|</span>
+              <Link
+                href="/machines"
+                className="text-xs text-white/30 hover:text-white/70 transition-colors duration-150"
+              >
+                Clear filters ×
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Empty state */}
+        {!machines || count === 0 ? (
+          <div className="text-center py-28">
+            <div className="text-white/10 text-7xl mb-5">⛏</div>
+            <p className="text-white/35 text-sm mb-6">No machines found matching your filters.</p>
+            <Link
+              href="/machines"
+              className="text-gold-400 hover:text-gold-300 text-sm font-semibold transition-colors duration-150"
+            >
+              Clear filters →
+            </Link>
+          </div>
+        ) : isListView ? (
+          /* List layout */
+          <div className="flex flex-col gap-3">
+            {machines.map(machine => (
+              <MachineCard
+                key={machine.id}
+                machine={machine}
+                isWatchlisted={watchlistedIds.has(machine.id)}
+                isInComparison={comparisonIds.has(machine.id)}
+                showActions={!!user}
+                viewMode="list"
+              />
+            ))}
+          </div>
+        ) : (
+          /* Grid layout */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {machines.map(machine => (
+              <MachineCard
+                key={machine.id}
+                machine={machine}
+                isWatchlisted={watchlistedIds.has(machine.id)}
+                isInComparison={comparisonIds.has(machine.id)}
+                showActions={!!user}
+                viewMode="grid"
+              />
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="bg-navy-950 border-t border-white/5 py-8 px-6 mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <Link href="/">
+              <Image src={logo} alt="BlueRock Equipment" className="h-8 w-auto object-contain invert opacity-75" />
+            </Link>
+            <p className="text-xs mt-1.5 text-white/20">Premium Direct-Sale Heavy Machinery</p>
+          </div>
+          <nav className="flex gap-5 text-xs text-white/30">
+            <Link href="/"      className="hover:text-white transition-colors duration-150">Home</Link>
+            <Link href="/trust" className="hover:text-white transition-colors duration-150">Trust Hub</Link>
+            <Link href="/auth/login" className="hover:text-white transition-colors duration-150">Sign In</Link>
+          </nav>
+        </div>
+      </footer>
+
+      {user && <ComparisonTray />}
+    </div>
+  )
 }

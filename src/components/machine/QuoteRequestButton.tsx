@@ -28,11 +28,7 @@ export default function QuoteRequestButton({
         credentials: 'include',
       })
       const json = await res.json()
-      if (!res.ok) {
-        setErrMsg(json.error || 'Submission failed')
-        setState('error')
-        return
-      }
+      if (!res.ok) { setErrMsg(json.error || 'Submission failed'); setState('error'); return }
       setState('done')
     } catch {
       setErrMsg('Network error — please try again')
@@ -42,11 +38,13 @@ export default function QuoteRequestButton({
 
   if (state === 'done') {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-5">
-        <p className="font-semibold text-green-800 text-base">Quote request submitted</p>
-        <p className="text-sm text-green-700 mt-1">
+      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5">
+        <p className="font-semibold text-emerald-400 text-sm">✓ Quote request submitted</p>
+        <p className="text-xs text-white/45 mt-1.5 leading-relaxed">
           Your Proforma Invoice will be ready within 24 hours.{' '}
-          <Link href="/dashboard" className="underline font-medium">Track it in your dashboard.</Link>
+          <Link href="/dashboard" className="text-gold-400 hover:text-gold-300 underline font-medium transition-colors">
+            Track it in your dashboard.
+          </Link>
         </p>
       </div>
     )
@@ -54,28 +52,22 @@ export default function QuoteRequestButton({
 
   if (state === 'prompt') {
     return (
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900">Ready to proceed?</h3>
-          <p className="text-sm text-gray-500 mt-1">Request a delivery quote — 48-hour price lock included.</p>
-        </div>
-        <button
-          onClick={() => setState('form')}
-          className="bg-blue-700 text-white px-6 py-3 rounded-md text-sm font-semibold hover:bg-blue-800 whitespace-nowrap"
-        >
-          Request Quote
-        </button>
-      </div>
+      <button
+        onClick={() => setState('form')}
+        className="w-full bg-gold-400 hover:bg-gold-300 text-navy-950 font-bold px-5 py-3.5 rounded-lg text-sm transition-colors duration-150 shadow-lg shadow-black/20"
+      >
+        Request a Quote
+      </button>
     )
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="font-semibold text-gray-900">Quote Request</h3>
+      <p className="text-white font-semibold text-sm">Quote Request</p>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Port of Discharge <span className="text-red-500">*</span>
+        <label className="block text-xs font-medium text-white/50 mb-1.5 uppercase tracking-wider">
+          Port of Discharge <span className="text-red-400">*</span>
         </label>
         <input
           type="text"
@@ -83,29 +75,29 @@ export default function QuoteRequestButton({
           onChange={e => setPort(e.target.value)}
           placeholder="e.g. Port of Lagos, Nigeria"
           required
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full bg-navy-950/60 border border-white/15 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-gold-400/50 focus:ring-1 focus:ring-gold-400/20 transition-colors"
         />
-        <p className="text-xs text-gray-400 mt-1">
-          The destination port for shipping. Used to calculate freight costs.
+        <p className="text-[10px] text-white/25 mt-1.5 leading-relaxed">
+          Your destination port — used to calculate freight costs in the Proforma.
         </p>
       </div>
 
       {state === 'error' && (
-        <p className="text-sm text-red-600">{errMsg}</p>
+        <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{errMsg}</p>
       )}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={state === 'loading'}
-          className="bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-semibold hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-gold-400 hover:bg-gold-300 text-navy-950 font-bold px-4 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {state === 'loading' ? 'Submitting…' : 'Submit Request'}
         </button>
         <button
           type="button"
           onClick={() => { setState('prompt'); setErrMsg('') }}
-          className="text-sm text-gray-500 hover:underline"
+          className="text-sm text-white/30 hover:text-white/60 transition-colors"
         >
           Cancel
         </button>
