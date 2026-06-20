@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
+import logo from '@/assests/img/logo.jpg'
 
 export default function LoginPage() {
     const supabase = createClient()
@@ -33,7 +35,9 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <div className="w-full max-w-md">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">BlueRock Equipment</h1>
+                    <Link href="/" className="inline-block mb-4">
+                      <Image src={logo} alt="BlueRock Equipment" className="h-10 w-auto object-contain" />
+                    </Link>
                     <p className="text-gray-500 text-sm mb-8">Sign in to your buyer account</p>
 
                     <form onSubmit={handleLogin} className="space-y-4">

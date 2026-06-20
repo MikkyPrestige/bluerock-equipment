@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import Image from 'next/image'
+import logo from '@/assests/img/logo.jpg'
 
 const STATS = [
   { value: '150-Point', label: 'Yard Inspection' },
@@ -26,9 +28,11 @@ export default function HomePage() {
       {/* Nav */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div>
-            <span className="text-lg font-bold text-gray-900">BlueRock Equipment</span>
-            <span className="hidden sm:inline text-xs text-amber-700 ml-3 font-medium uppercase tracking-wider">Premium Direct-Sale</span>
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain" />
+            </Link>
+            <span className="hidden sm:inline text-xs text-amber-700 font-medium uppercase tracking-wider">Premium Direct-Sale</span>
           </div>
           <nav className="flex items-center gap-4 sm:gap-6">
             <Link href="/machines" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block">Inventory</Link>
@@ -157,8 +161,10 @@ export default function HomePage() {
       <footer className="bg-gray-950 text-gray-500 py-8 px-6">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <p className="text-white font-semibold text-sm">BlueRock Equipment</p>
-            <p className="text-xs mt-0.5">Premium Direct-Sale Heavy Machinery</p>
+            <Link href="/">
+              <Image src={logo} alt="BlueRock Equipment" className="h-10 w-auto object-contain invert opacity-90" />
+            </Link>
+            <p className="text-xs mt-1 text-gray-500">Premium Direct-Sale Heavy Machinery</p>
           </div>
           <nav className="flex gap-5 text-xs">
             <Link href="/machines" className="hover:text-white">Inventory</Link>

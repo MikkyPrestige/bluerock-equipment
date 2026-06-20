@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import SignOutButton from './signout-button'
+import logo from '@/assests/img/logo.jpg'
 
 const quoteStatusLabel: Record<string, { label: string; classes: string }> = {
   pending_quote:     { label: 'Awaiting Quote',      classes: 'bg-amber-100 text-amber-800' },
@@ -38,7 +40,9 @@ export default async function DashboardPage() {
     return (
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h1 className="text-lg font-bold text-gray-900">BlueRock Equipment</h1>
+                <Link href="/">
+                  <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain" />
+                </Link>
                 <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-500">{buyer?.company_name || user.email}</span>
                     <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase ${buyer?.tier === 'gold' ? 'bg-yellow-100 text-yellow-800' :

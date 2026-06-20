@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import Image from 'next/image'
+import logo from '@/assests/img/logo.jpg'
 
 export const metadata: Metadata = {
   title: 'Trust & Verification Hub',
@@ -96,7 +98,9 @@ export default function TrustPage() {
       {/* Nav */}
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-gray-900">BlueRock Equipment</Link>
+          <Link href="/">
+            <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain" />
+          </Link>
           <nav className="flex items-center gap-4 sm:gap-6">
             <Link href="/machines" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block">Inventory</Link>
             <Link href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900 hidden sm:block">Sign In</Link>
@@ -278,7 +282,12 @@ export default function TrustPage() {
 
       <footer className="bg-gray-950 text-gray-500 py-8 px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-white font-semibold text-sm">BlueRock Equipment &mdash; Premium Direct-Sale Heavy Machinery</p>
+          <div className="flex items-center gap-2">
+            <Link href="/">
+              <Image src={logo} alt="BlueRock Equipment" className="h-10 w-auto object-contain invert opacity-90" />
+            </Link>
+            <span className="text-gray-500 text-sm">&mdash; Premium Direct-Sale Heavy Machinery</span>
+          </div>
           <nav className="flex gap-5 text-xs">
             <Link href="/" className="hover:text-white">Home</Link>
             <Link href="/machines" className="hover:text-white">Inventory</Link>

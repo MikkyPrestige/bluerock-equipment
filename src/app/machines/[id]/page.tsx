@@ -8,6 +8,7 @@ import CompareToggle from '@/components/machine/CompareToggle'
 import ConfidenceBadges from '@/components/trust/ConfidenceBadges'
 import CalendlyButton from '@/components/trust/CalendlyButton'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
+import logo from '@/assests/img/logo.jpg'
 
 const wearColors: Record<string, string> = {
   excellent: 'bg-green-100 text-green-800',
@@ -85,7 +86,9 @@ export default async function MachineDetailPage({
         <Link href="/machines" className="text-sm text-blue-700 hover:underline">
           Back to inventory
         </Link>
-        <h1 className="text-lg font-bold text-gray-900">BlueRock Equipment</h1>
+        <Link href="/">
+          <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain" />
+        </Link>
         <Link href="/auth/login" className="text-sm bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800">
           Sign in
         </Link>

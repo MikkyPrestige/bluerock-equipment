@@ -3,6 +3,8 @@ import { adminSupabase } from '@/lib/supabase/admin'
 import MachineCard from '@/components/machine/MachineCard'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
 import Link from 'next/link'
+import Image from 'next/image'
+import logo from '@/assests/img/logo.jpg'
 
 const CATEGORIES = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
 const BRANDS = ['Caterpillar', 'Komatsu', 'Volvo', 'Sany', 'Hitachi', 'Liebherr']
@@ -48,7 +50,9 @@ export default async function MachinesPage({
     return (
         <div className="min-h-screen bg-gray-50">
             <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <h1 className="text-lg font-bold text-gray-900">BlueRock Equipment</h1>
+                <Link href="/">
+                  <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain" />
+                </Link>
                 <div className="flex items-center gap-4">
                     <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-900">Dashboard</Link>
                     <Link href="/auth/login" className="text-sm bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800">Sign in</Link>
