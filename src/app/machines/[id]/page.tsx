@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import QuoteRequestButton from '@/components/machine/QuoteRequestButton'
 
 const wearColors: Record<string, string> = {
   excellent: 'bg-green-100 text-green-800',
@@ -49,13 +50,22 @@ export default async function MachineDetailPage({
   const supabase = await createClient()
   const { id } = await params
 
-  const { data: machine, error } = await supabase
-    .from('machines')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data: machine, error }, { data: { user } }] = await Promise.all([
+    supabase.from('machines').select('*').eq('id', id).single(),
+    supabase.auth.getUser(),
+  ])
 
   if (error || !machine) notFound()
+
+  let buyerPort = ''
+  if (user) {
+    const { data: buyer } = await supabase
+      .from('buyers')
+      .select('preferred_port_of_discharge')
+      .eq('id', user.id)
+      .single()
+    buyerPort = buyer?.preferred_port_of_discharge ?? ''
+  }
 
   const m = machine as Machine
   const wearAnalysis = m.wear_analysis || {}
@@ -188,15 +198,19 @@ export default async function MachineDetailPage({
 
         <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
           {m.status === 'available' ? (
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">Ready to proceed?</h3>
-                <p className="text-sm text-gray-500 mt-1">Sign in to request a delivery quote for this machine.</p>
+            user ? (
+              <QuoteRequestButton machineId={m.id} defaultPort={buyerPort} />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900">Ready to proceed?</h3>
+                  <p className="text-sm text-gray-500 mt-1">Sign in to request a delivery quote for this machine.</p>
+                </div>
+                <Link href="/auth/login" className="bg-blue-700 text-white px-6 py-3 rounded-md text-sm font-semibold hover:bg-blue-800 whitespace-nowrap">
+                  Sign In to Request Quote
+                </Link>
               </div>
-              <Link href="/auth/login" className="bg-blue-700 text-white px-6 py-3 rounded-md text-sm font-semibold hover:bg-blue-800 whitespace-nowrap">
-                Request Quote
-              </Link>
-            </div>
+            )
           ) : (
             <div>
               <h3 className="font-semibold text-gray-900">This machine is currently {m.status.replace(/_/g, ' ')}</h3>
