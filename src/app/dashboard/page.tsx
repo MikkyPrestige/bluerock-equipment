@@ -93,6 +93,12 @@ export default async function DashboardPage() {
                                                     <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase ${status.classes}`}>
                                                         {status.label}
                                                     </span>
+                                                    <Link
+                                                        href={`/dashboard/quotes/${q.id}`}
+                                                        className="text-xs text-blue-700 hover:underline font-medium whitespace-nowrap"
+                                                    >
+                                                        View Details
+                                                    </Link>
                                                 </div>
                                             </div>
                                         )

@@ -4,6 +4,10 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import QuoteBuilderForm from '@/components/admin/QuoteBuilderForm'
 import GenerateProformaButton from '@/components/admin/GenerateProformaButton'
+import MilestoneTracker from '@/components/quote/MilestoneTracker'
+import MilestoneSwitchboard from '@/components/admin/MilestoneSwitchboard'
+import DocumentVault from '@/components/quote/DocumentVault'
+import DocumentLedger from '@/components/admin/DocumentLedger'
 
 const statusColors: Record<string, string> = {
   pending_quote:      'bg-amber-100 text-amber-800',
@@ -31,6 +35,13 @@ export default async function AdminQuoteDetailPage({
     .select('*, machines(*), buyers(*)')
     .eq('id', id)
     .single()
+
+  const { data: documents } = await adminSupabase
+    .from('documents')
+    .select('id, document_type, version, file_path, superseded_at, created_at')
+    .eq('quote_id', id)
+    .order('document_type')
+    .order('version', { ascending: false })
 
   if (error || !quote) notFound()
 
@@ -123,17 +134,42 @@ export default async function AdminQuoteDetailPage({
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Proforma Invoice</h2>
           {quote.proforma_invoice_url && (
-            <p className="text-xs text-gray-400 mb-3">
-              Current file: {quote.proforma_invoice_url}
-            </p>
+            <p className="text-xs text-gray-400 mb-3">Current: {quote.proforma_invoice_url}</p>
           )}
           <p className="text-sm text-gray-500 mb-4">
-            Save pricing above before generating. The PDF will be stored in the Documents vault.
+            Save pricing above before generating. The PDF is stored in the buyer&apos;s Document Vault.
           </p>
           <GenerateProformaButton
             quoteId={id}
             hasProforma={!!quote.proforma_invoice_url}
           />
+        </div>
+
+        {/* Milestone Tracker */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-6">Transaction Progress</h2>
+          <MilestoneTracker currentPhase={quote.milestone_phase ?? 0} />
+        </div>
+
+        {/* Milestone Switchboard */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Milestone Switchboard</h2>
+          <MilestoneSwitchboard quoteId={id} currentPhase={quote.milestone_phase ?? 0} />
+        </div>
+
+        {/* Document Vault */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Document Vault</h2>
+          <DocumentVault documents={documents ?? []} />
+        </div>
+
+        {/* Document Ledger — Upload Trade Docs */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Upload Trade Document</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Upload signed B/L, export certificate, customs manifest or packing list. Previous versions are automatically superseded.
+          </p>
+          <DocumentLedger quoteId={id} />
         </div>
 
       </main>
