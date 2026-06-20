@@ -3,6 +3,10 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import QuoteRequestButton from '@/components/machine/QuoteRequestButton'
+import WatchlistButton from '@/components/machine/WatchlistButton'
+import CompareToggle from '@/components/machine/CompareToggle'
+import ConfidenceBadges from '@/components/trust/ConfidenceBadges'
+import ComparisonTray from '@/components/comparison/ComparisonTray'
 
 const wearColors: Record<string, string> = {
   excellent: 'bg-green-100 text-green-800',
@@ -58,13 +62,16 @@ export default async function MachineDetailPage({
   if (error || !machine) notFound()
 
   let buyerPort = ''
+  let isWatchlisted = false
+  let isInComparison = false
   if (user) {
-    const { data: buyer } = await supabase
-      .from('buyers')
-      .select('preferred_port_of_discharge')
-      .eq('id', user.id)
-      .single()
+    const [{ data: buyer }, { data: wlEntry }] = await Promise.all([
+      supabase.from('buyers').select('preferred_port_of_discharge').eq('id', user.id).single(),
+      supabase.from('watchlist').select('in_comparison').eq('buyer_id', user.id).eq('machine_id', id).maybeSingle(),
+    ])
     buyerPort = buyer?.preferred_port_of_discharge ?? ''
+    isWatchlisted = !!wlEntry
+    isInComparison = wlEntry?.in_comparison ?? false
   }
 
   const m = machine as Machine
@@ -134,9 +141,17 @@ export default async function MachineDetailPage({
             )}
           </div>
 
-          <span className="inline-flex items-center text-xs font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">
-            150-Point Yard Inspection Completed
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center text-xs font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">
+              ✓ 150-Point Yard Inspection Completed
+            </span>
+            {user && (
+              <div className="flex items-center gap-2">
+                <WatchlistButton machineId={m.id} initialWatchlisted={isWatchlisted} />
+                <CompareToggle machineId={m.id} initialInComparison={isInComparison} />
+              </div>
+            )}
+          </div>
         </div>
 
         {m.description && (
@@ -192,8 +207,8 @@ export default async function MachineDetailPage({
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Ballpark Freight Estimator</h3>
-          <p className="text-sm text-gray-400">Freight estimator coming in Sprint 5.</p>
+          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Why Buy Through BlueRock</h3>
+          <ConfidenceBadges />
         </div>
 
         <div className="bg-blue-50 rounded-lg border border-blue-200 p-6">
@@ -223,6 +238,8 @@ export default async function MachineDetailPage({
         </div>
 
       </main>
+
+      {user && <ComparisonTray />}
     </div>
   )
 }

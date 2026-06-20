@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import { adminSupabase } from '@/lib/supabase/admin'
 import MachineCard from '@/components/machine/MachineCard'
+import ComparisonTray from '@/components/comparison/ComparisonTray'
 import Link from 'next/link'
 
 const CATEGORIES = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
@@ -14,6 +16,8 @@ export default async function MachinesPage({
     const supabase = await createClient()
     const params = await searchParams
 
+    const { data: { user } } = await supabase.auth.getUser()
+
     let query = supabase
         .from('machines')
         .select('*')
@@ -26,6 +30,20 @@ export default async function MachinesPage({
     const { data: machines, error } = await query
 
     if (error) return <div className="p-8 text-red-600">Error loading machines: {error.message}</div>
+
+    // Fetch watchlist state for the current buyer (if logged in)
+    let watchlistedIds = new Set<string>()
+    let comparisonIds = new Set<string>()
+    if (user) {
+        const { data: wl } = await adminSupabase
+            .from('watchlist')
+            .select('machine_id, in_comparison')
+            .eq('buyer_id', user.id)
+        for (const w of wl ?? []) {
+            watchlistedIds.add(w.machine_id)
+            if (w.in_comparison) comparisonIds.add(w.machine_id)
+        }
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -103,12 +121,20 @@ export default async function MachinesPage({
                         <p className="text-sm text-gray-500 mb-6">{machines.length} machine{machines.length !== 1 ? 's' : ''} available</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {machines.map(machine => (
-                                <MachineCard key={machine.id} machine={machine} />
+                                <MachineCard
+                                    key={machine.id}
+                                    machine={machine}
+                                    isWatchlisted={watchlistedIds.has(machine.id)}
+                                    isInComparison={comparisonIds.has(machine.id)}
+                                    showActions={!!user}
+                                />
                             ))}
                         </div>
                     </>
                 )}
             </main>
+
+            {user && <ComparisonTray />}
         </div>
     )
 }

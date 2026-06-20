@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import WatchlistButton from './WatchlistButton'
+import CompareToggle from './CompareToggle'
 
 interface Machine {
     id: string
@@ -31,10 +33,20 @@ const statusColors: Record<string, string> = {
     sold: 'bg-red-100 text-red-800',
 }
 
-export default function MachineCard({ machine }: { machine: Machine }) {
+export default function MachineCard({
+    machine,
+    isWatchlisted = false,
+    isInComparison = false,
+    showActions = false,
+}: {
+    machine: Machine
+    isWatchlisted?: boolean
+    isInComparison?: boolean
+    showActions?: boolean
+}) {
     return (
-        <Link href={`/machines/${machine.id}`}>
-            <div className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all p-5 cursor-pointer">
+        <div className="bg-white rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all overflow-hidden">
+            <Link href={`/machines/${machine.id}`} className="block p-5">
 
                 {/* Header */}
                 <div className="flex items-start justify-between mb-3">
@@ -70,7 +82,14 @@ export default function MachineCard({ machine }: { machine: Machine }) {
                         ✓ 150-Point Inspected
                     </span>
                 </div>
-            </div>
-        </Link>
+            </Link>
+
+            {showActions && (
+                <div className="border-t border-gray-100 px-5 py-2.5 flex items-center justify-between bg-gray-50">
+                    <WatchlistButton machineId={machine.id} initialWatchlisted={isWatchlisted} />
+                    <CompareToggle machineId={machine.id} initialInComparison={isInComparison} />
+                </div>
+            )}
+        </div>
     )
 }

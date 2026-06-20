@@ -15,6 +15,7 @@ export default async function AdminInventoryPage() {
                 <div className="flex items-center gap-6">
                     <h1 className="text-lg font-bold text-gray-900">Admin — Inventory</h1>
                     <Link href="/admin/quotes" className="text-sm text-gray-500 hover:text-gray-900">Quotes</Link>
+                    <Link href="/admin/buyers" className="text-sm text-gray-500 hover:text-gray-900">Buyers</Link>
                 </div>
                 <Link
                     href="/admin/inventory/new"

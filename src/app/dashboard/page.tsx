@@ -19,14 +19,21 @@ export default async function DashboardPage() {
 
     if (!user) redirect('/auth/login')
 
-    const [{ data: buyer }, { data: quotes }] = await Promise.all([
+    const [{ data: buyer }, { data: quotes }, { data: watchlist }] = await Promise.all([
         supabase.from('buyers').select('*').eq('id', user.id).single(),
         supabase
             .from('quotes')
             .select('id, status, total_amount, lock_expires_at, created_at, port_of_discharge, machines(name, brand, model, price_usd)')
             .eq('buyer_id', user.id)
             .order('created_at', { ascending: false }),
+        supabase
+            .from('watchlist')
+            .select('machine_id, in_comparison, created_at, machines(id, name, brand, model, price_usd, status)')
+            .eq('buyer_id', user.id)
+            .order('created_at', { ascending: false }),
     ])
+
+    const comparisonCount = (watchlist ?? []).filter(w => w.in_comparison).length
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -47,13 +54,52 @@ export default async function DashboardPage() {
                 <main className="max-w-7xl mx-auto px-6 py-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Watchlist & Alerts</h2>
-                            <p className="text-sm text-gray-400">No saved machines yet.</p>
+                            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+                                Watchlist & Alerts
+                                {watchlist && watchlist.length > 0 && (
+                                    <span className="ml-2 text-xs font-normal text-gray-400">({watchlist.length})</span>
+                                )}
+                            </h2>
+                            {!watchlist || watchlist.length === 0 ? (
+                                <div>
+                                    <p className="text-sm text-gray-400">No saved machines yet.</p>
+                                    <Link href="/machines" className="mt-2 inline-block text-sm text-blue-700 hover:underline">Browse inventory →</Link>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {watchlist.map(w => {
+                                        const m = w.machines as unknown as { id: string; name?: string; brand: string; model: string; price_usd: number; status: string } | null
+                                        if (!m) return null
+                                        return (
+                                            <div key={w.machine_id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                                                <Link href={`/machines/${m.id}`} className="text-sm font-medium text-gray-900 hover:underline">
+                                                    {m.name || `${m.brand} ${m.model}`}
+                                                </Link>
+                                                <span className="text-sm text-gray-500">${Number(m.price_usd).toLocaleString()}</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Comparison Workbench</h2>
-                            <p className="text-sm text-gray-400">No machines selected for comparison.</p>
+                            {comparisonCount > 0 ? (
+                                <div>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                        {comparisonCount} machine{comparisonCount > 1 ? 's' : ''} in your tray.
+                                    </p>
+                                    <Link href="/comparison" className="bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-800 inline-block">
+                                        Open Workbench
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div>
+                                    <p className="text-sm text-gray-400">No machines selected for comparison.</p>
+                                    <p className="text-xs text-gray-400 mt-1">Click &quot;Compare&quot; on any machine card to add it.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white rounded-lg border border-gray-200 p-6 md:col-span-2">
