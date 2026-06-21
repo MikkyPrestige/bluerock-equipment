@@ -16,9 +16,25 @@ export async function GET(
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { data: buyer, error } = await adminSupabase.from('buyers').select('*').eq('id', id).single()
+
+  const [{ data: buyer, error }, { data: quotes }] = await Promise.all([
+    adminSupabase.from('buyers').select('*').eq('id', id).single(),
+    adminSupabase
+      .from('quotes')
+      .select('id, status, created_at')
+      .eq('buyer_id', id)
+      .order('created_at', { ascending: false }),
+  ])
+
   if (error || !buyer) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json({ buyer })
+
+  const activity = {
+    total_quotes:         quotes?.length ?? 0,
+    purchases_completed:  quotes?.filter(q => q.status === 'sold').length ?? 0,
+    last_activity:        quotes?.[0]?.created_at ?? null,
+  }
+
+  return NextResponse.json({ buyer, activity })
 }
 
 export async function PATCH(

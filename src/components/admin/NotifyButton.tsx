@@ -24,10 +24,10 @@ export default function NotifyButton({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          buyer_id: buyerId,
-          buyer_email: buyerEmail,
-          company_name: companyName,
-          machine_name: machineName,
+          buyer_id:         buyerId,
+          buyer_email:      buyerEmail,
+          company_name:     companyName,
+          machine_name:     machineName,
           machine_category: machineCategory,
         }),
         credentials: 'include',
@@ -39,11 +39,11 @@ export default function NotifyButton({
   }
 
   if (state === 'sent') {
-    return <span className="text-xs font-medium text-green-700">Notified</span>
+    return <span className="text-xs font-semibold text-emerald-400">✓ Notified</span>
   }
   if (state === 'error') {
     return (
-      <button onClick={handleNotify} className="text-xs text-red-600 hover:underline">
+      <button onClick={handleNotify} className="text-xs text-red-400 hover:text-red-300 transition-colors">
         Failed — retry
       </button>
     )
@@ -53,7 +53,7 @@ export default function NotifyButton({
     <button
       onClick={handleNotify}
       disabled={state === 'sending'}
-      className="text-xs font-medium text-blue-700 hover:underline disabled:text-gray-400"
+      className="text-xs font-semibold text-gold-400 hover:text-gold-300 disabled:text-white/25 disabled:cursor-wait transition-colors duration-150"
     >
       {state === 'sending' ? 'Sending…' : 'Notify'}
     </button>

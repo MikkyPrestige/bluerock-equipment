@@ -25,7 +25,7 @@ export default function MilestoneSwitchboard({
       if (!res.ok) { setState('error'); return }
       setPhase(newPhase)
       setState('saved')
-      setTimeout(() => setState('idle'), 2000)
+      setTimeout(() => setState('idle'), 2500)
     } catch {
       setState('error')
     }
@@ -35,42 +35,46 @@ export default function MilestoneSwitchboard({
   const isLast = phase >= MILESTONE_PHASES.length - 1
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Current Phase</p>
-          <p className="text-base font-semibold text-gray-900">
-            Phase {phase} — {currentLabel}
+    <div className="space-y-5">
+
+      {/* Current phase + advance button */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1.5">Current Phase</p>
+          <p className="text-base font-semibold text-white">
+            Phase {phase} <span className="text-white/45">—</span> {currentLabel}
           </p>
         </div>
-        {!isLast && (
+
+        {!isLast ? (
           <button
             onClick={() => savePhase(phase + 1)}
             disabled={state === 'saving'}
-            className="bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-800 disabled:opacity-50 whitespace-nowrap"
+            className="bg-gold-400 hover:bg-gold-300 disabled:opacity-50 text-navy-950 font-bold px-5 py-2.5 rounded-xl text-sm transition-colors duration-150 shadow-md shadow-black/20 whitespace-nowrap flex-shrink-0"
           >
             {state === 'saving' ? 'Saving…' : `Advance to Phase ${phase + 1}`}
           </button>
-        )}
-        {isLast && (
-          <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-2 rounded-md">
-            Transaction Complete
+        ) : (
+          <span className="bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 px-4 py-2.5 rounded-xl text-sm font-semibold">
+            ✓ Transaction Complete
           </span>
         )}
       </div>
 
+      {/* Jump to phase */}
       <div>
-        <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Jump to Phase</p>
+        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Jump to Phase</p>
         <div className="flex flex-wrap gap-2">
           {MILESTONE_PHASES.map(({ phase: p, label }) => (
             <button
               key={p}
               onClick={() => savePhase(p)}
               disabled={state === 'saving' || p === phase}
-              className={`text-xs px-3 py-1 rounded-full border font-medium transition-colors disabled:cursor-not-allowed ${
+              title={label}
+              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all duration-150 disabled:cursor-not-allowed ${
                 p === phase
-                  ? 'bg-blue-700 text-white border-blue-700'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-700'
+                  ? 'bg-gold-400/15 border-gold-400/40 text-gold-400 font-bold'
+                  : 'border-white/12 text-white/35 hover:border-white/30 hover:text-white/65'
               }`}
             >
               {p}: {label}
@@ -79,8 +83,17 @@ export default function MilestoneSwitchboard({
         </div>
       </div>
 
-      {state === 'saved' && <p className="text-xs text-green-700">Phase updated.</p>}
-      {state === 'error'  && <p className="text-xs text-red-600">Failed to update phase.</p>}
+      {/* Feedback */}
+      {state === 'saved' && (
+        <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg">
+          ✓ Phase updated.
+        </p>
+      )}
+      {state === 'error' && (
+        <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+          Failed to update phase. Please try again.
+        </p>
+      )}
     </div>
   )
 }

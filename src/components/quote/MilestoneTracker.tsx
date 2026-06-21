@@ -2,7 +2,7 @@ import { MILESTONE_PHASES } from '@/lib/milestones'
 
 export default function MilestoneTracker({ currentPhase }: { currentPhase: number }) {
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto scrollbar-hide">
       <div className="flex items-start min-w-[560px]">
         {MILESTONE_PHASES.map(({ phase, label, description }, index) => {
           const done    = phase < currentPhase
@@ -11,23 +11,27 @@ export default function MilestoneTracker({ currentPhase }: { currentPhase: numbe
 
           return (
             <div key={phase} className="flex items-start flex-1">
-              {/* Step */}
               <div className="flex flex-col items-center flex-shrink-0">
+                {/* Step circle */}
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
-                  done    ? 'bg-blue-700 border-blue-700 text-white' :
-                  current ? 'bg-white border-blue-700 text-blue-700' :
-                            'bg-white border-gray-300 text-gray-400'
+                  done    ? 'bg-gold-400 border-gold-400 text-navy-950' :
+                  current ? 'bg-transparent border-gold-400 text-gold-400' :
+                            'bg-transparent border-white/15 text-white/25'
                 }`}>
                   {done ? '✓' : phase}
                 </div>
+
+                {/* Label */}
                 <div className="mt-2 text-center w-20">
                   <p className={`text-xs font-semibold leading-tight ${
-                    current ? 'text-blue-700' : done ? 'text-gray-700' : 'text-gray-400'
+                    current ? 'text-gold-400' :
+                    done    ? 'text-white/55' :
+                              'text-white/20'
                   }`}>
                     {label}
                   </p>
                   {current && (
-                    <p className="text-xs text-gray-500 mt-0.5 leading-tight">{description}</p>
+                    <p className="text-[10px] text-white/35 mt-0.5 leading-tight">{description}</p>
                   )}
                 </div>
               </div>
@@ -35,7 +39,7 @@ export default function MilestoneTracker({ currentPhase }: { currentPhase: numbe
               {/* Connector */}
               {index < MILESTONE_PHASES.length - 1 && (
                 <div className={`flex-1 h-0.5 mt-4 mx-1 transition-colors ${
-                  done ? 'bg-blue-700' : 'bg-gray-200'
+                  done ? 'bg-gold-400' : 'bg-white/8'
                 }`} />
               )}
             </div>

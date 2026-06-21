@@ -1,24 +1,54 @@
 import { adminSupabase } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
+import logo               from '@/assests/img/logo.jpg'
 import AddWalkthroughForm from '@/components/admin/AddWalkthroughForm'
-import WalkthroughEditor from '@/components/admin/WalkthroughEditor'
+import WalkthroughEditor  from '@/components/admin/WalkthroughEditor'
 
-const statusConfig: Record<string, { label: string; classes: string }> = {
-  scheduled:  { label: 'Scheduled',  classes: 'bg-blue-100 text-blue-800' },
-  completed:  { label: 'Completed',  classes: 'bg-green-100 text-green-800' },
-  cancelled:  { label: 'Cancelled',  classes: 'bg-gray-100 text-gray-600' },
-  no_show:    { label: 'No Show',    classes: 'bg-red-100 text-red-800' },
+/* ── Status badge map ── */
+const STATUS: Record<string, { label: string; badge: string }> = {
+  scheduled: { label: 'Scheduled', badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  completed: { label: 'Completed', badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled: { label: 'Cancelled', badge: 'bg-white/8 border-white/12 text-white/30' },
+  no_show:   { label: 'No Show',   badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
 }
+
+const TABS = [
+  { label: 'Inventory',    href: '/admin/inventory' },
+  { label: 'Quotes',       href: '/admin/quotes' },
+  { label: 'Buyers',       href: '/admin/buyers' },
+  { label: 'Walkthroughs', href: '/admin/walkthroughs' },
+  { label: 'Freight',      href: '/admin/freight-rates' },
+]
 
 function fmtDate(iso: string) {
   const d = new Date(iso)
   return {
-    date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    weekday:  d.toLocaleDateString('en-US', { weekday: 'short' }),
+    monthDay: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    time:     d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    full:     d.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }),
   }
 }
 
+type WRow = {
+  id: string
+  status: string
+  scheduled_at: string
+  technician: string | null
+  admin_notes: string | null
+  calendly_event_url: string | null
+  buyers: unknown
+  machines: unknown
+}
+
 export default async function AdminWalkthroughsPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || user.email !== process.env.ADMIN_EMAIL) redirect('/auth/login')
+
   const [
     { data: walkthroughs },
     { data: buyers },
@@ -32,115 +62,183 @@ export default async function AdminWalkthroughsPage() {
     adminSupabase.from('machines').select('id, name, brand, model').neq('status', 'sold').order('name'),
   ])
 
-  const now = new Date()
-  const upcoming = (walkthroughs ?? []).filter(w => new Date(w.scheduled_at) >= now && w.status === 'scheduled')
-  const past     = (walkthroughs ?? []).filter(w => new Date(w.scheduled_at) < now || w.status !== 'scheduled')
+  const all      = (walkthroughs ?? []) as WRow[]
+  const now      = new Date()
+  const upcoming = all.filter(w => new Date(w.scheduled_at) >= now && w.status === 'scheduled')
+  const past     = all.filter(w => new Date(w.scheduled_at) < now  || w.status !== 'scheduled')
 
-  const buyerList = (buyers ?? []).map(b => ({ id: b.id, email: b.email, company_name: b.company_name }))
-  const machineList = (machines ?? []).map(m => ({
-    id: m.id,
-    name: (m as unknown as { name?: string; brand: string; model: string }).name
-      || `${(m as unknown as { brand: string }).brand} ${(m as unknown as { model: string }).model}`,
-  }))
+  const buyerList   = (buyers ?? []).map(b => ({ id: b.id, email: b.email, company_name: b.company_name }))
+  const machineList = (machines ?? []).map(m => {
+    const mm = m as unknown as { id: string; name?: string; brand: string; model: string }
+    return { id: mm.id, name: mm.name || `${mm.brand} ${mm.model}` }
+  })
+
+  const stats = [
+    { label: 'Total',     value: all.length },
+    { label: 'Upcoming',  value: upcoming.length, accent: upcoming.length > 0 ? 'text-blue-400' : undefined },
+    { label: 'Completed', value: all.filter(w => w.status === 'completed').length, accent: 'text-emerald-400' },
+    { label: 'No Shows',  value: all.filter(w => w.status === 'no_show').length,   accent: all.filter(w => w.status === 'no_show').length > 0 ? 'text-amber-400' : undefined },
+  ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-navy-950 flex flex-col">
+
+      {/* ── STICKY NAV ── */}
+      <header className="sticky top-0 z-40 bg-navy-950/96 backdrop-blur-md border-b border-white/8">
+        <div className="px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-900">← Admin</Link>
-            <h1 className="text-lg font-bold text-gray-900">Walkthrough Schedule</h1>
+            <Link href="/">
+              <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain invert opacity-90" />
+            </Link>
+            <div className="hidden sm:block h-5 w-px bg-white/10" />
+            <div className="hidden sm:block">
+              <p className="text-[10px] font-bold text-gold-400 uppercase tracking-widest leading-none mb-1">Admin</p>
+              <p className="font-display text-sm font-bold text-white leading-none">Walkthrough Schedule</p>
+            </div>
           </div>
-          <AddWalkthroughForm buyers={buyerList} machines={machineList} />
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin"
+              className="text-xs text-white/35 hover:text-white/65 transition-colors duration-150 hidden sm:inline"
+            >
+              Dashboard
+            </Link>
+            <div className="hidden sm:block h-4 w-px bg-white/10" />
+            {/* Modal trigger — renders + Log Walkthrough button + overlay */}
+            <AddWalkthroughForm buyers={buyerList} machines={machineList} />
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div className="px-6 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center min-w-max border-t border-white/6">
+            {TABS.map(tab => {
+              const isActive = tab.href === '/admin/walkthroughs'
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`px-5 py-3 text-xs font-semibold border-b-2 transition-colors duration-150 whitespace-nowrap ${
+                    isActive
+                      ? 'border-gold-400 text-gold-400'
+                      : 'border-transparent text-white/35 hover:text-white/65 hover:border-white/20'
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </header>
 
-      <div className="bg-amber-50 border-b border-amber-100 px-6 py-2">
-        <p className="text-xs text-amber-800 max-w-3xl">
-          <strong>Calendly Free Tier:</strong> Bookings are not synced automatically — no API access on the free plan.
-          Log each walkthrough manually after receiving the Calendly booking email. Paste the event URL for reference.
-        </p>
+      {/* ── STATS BAR ── */}
+      <div className="bg-navy-900 border-b border-white/8 px-6 py-4">
+        <div className="max-w-4xl mx-auto grid grid-cols-4 gap-4 sm:gap-8">
+          {stats.map(s => (
+            <div key={s.label} className="text-center">
+              <p className={`font-display text-xl sm:text-2xl font-bold tabular-nums ${s.accent ?? 'text-white'}`}>
+                {s.value}
+              </p>
+              <p className="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-10">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 space-y-10">
 
-        {/* Upcoming */}
+        {/* ── UPCOMING ── */}
         <section>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+          <h2 className="text-[10px] font-bold text-gold-400 uppercase tracking-widest mb-4">
             Upcoming ({upcoming.length})
           </h2>
 
           {upcoming.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <p className="text-sm text-gray-400">No upcoming walkthroughs scheduled.</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Use &quot;+ Log Walkthrough&quot; after a buyer books via the machine detail page.
+            <div className="bg-navy-900 border border-white/8 rounded-2xl px-8 py-12 text-center">
+              <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-5 h-5 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-white/50 mb-1">No upcoming walkthroughs scheduled</p>
+              <p className="text-xs text-white/25 max-w-sm mx-auto leading-relaxed">
+                Walkthroughs are logged manually after a buyer books via the machine detail page.
+                Use &quot;+ Log Walkthrough&quot; above to add one.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {upcoming.map(w => {
-                const { date, time } = fmtDate(w.scheduled_at)
-                const buyer = w.buyers as unknown as { id: string; email: string; company_name: string | null } | null
-                const machine = w.machines as unknown as { id: string; name?: string; brand: string; model: string } | null
+                const { weekday, monthDay, time } = fmtDate(w.scheduled_at)
+                const buyer   = w.buyers   as { id: string; email: string; company_name: string | null } | null
+                const machine = w.machines as { id: string; name?: string; brand: string; model: string } | null
                 const machineName = machine?.name ?? (machine ? `${machine.brand} ${machine.model}` : null)
-                const st = statusConfig[w.status] ?? { label: w.status, classes: 'bg-gray-100 text-gray-600' }
+                const st = STATUS[w.status] ?? { label: w.status, badge: 'bg-white/8 border-white/12 text-white/30' }
 
                 return (
-                  <div key={w.id} className="bg-white border border-gray-200 rounded-lg p-5">
-                    <div className="flex items-start justify-between gap-4">
+                  <div key={w.id} className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+                    <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
 
-                      {/* Date column */}
-                      <div className="flex-shrink-0 bg-blue-700 text-white rounded-lg px-4 py-3 text-center min-w-[80px]">
-                        <p className="text-xs font-medium uppercase tracking-wide opacity-75">{date.split(',')[0]}</p>
-                        <p className="text-sm font-bold leading-tight">{date.split(',')[1]?.trim()}</p>
-                        <p className="text-xs mt-1 font-semibold">{time}</p>
+                      {/* Date callout */}
+                      <div className="flex-shrink-0 bg-navy-800 border border-white/10 rounded-xl px-4 py-3 text-center min-w-[82px]">
+                        <p className="text-[10px] font-bold text-gold-400 uppercase tracking-widest">{weekday}</p>
+                        <p className="text-sm font-bold text-white leading-tight mt-0.5">{monthDay}</p>
+                        <p className="text-gold-300 text-xs font-semibold mt-1">{time}</p>
                       </div>
 
                       {/* Details */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <p className="font-semibold text-gray-900">
-                            {buyer?.company_name || buyer?.email || 'Unknown buyer'}
-                          </p>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${st.classes}`}>
+                        <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+                          <div>
+                            <p className="font-semibold text-white/90 leading-tight">
+                              {buyer?.company_name || buyer?.email || 'Unknown buyer'}
+                            </p>
+                            {buyer?.company_name && (
+                              <p className="text-xs text-white/35 mt-0.5">{buyer.email}</p>
+                            )}
+                          </div>
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide flex-shrink-0 ${st.badge}`}>
                             {st.label}
                           </span>
                         </div>
-                        {machineName && machine && (
-                          <p className="text-sm text-gray-500">
-                            Machine:{' '}
-                            <Link href={`/machines/${machine.id}`} className="text-blue-700 hover:underline">
+
+                        <div className="flex items-center gap-4 flex-wrap text-xs">
+                          {machineName && machine && (
+                            <Link
+                              href={`/machines/${machine.id}`}
+                              target="_blank"
+                              className="text-white/45 hover:text-gold-300 transition-colors duration-150"
+                            >
                               {machineName}
                             </Link>
-                          </p>
-                        )}
-                        {w.technician && (
-                          <p className="text-xs text-gray-400 mt-0.5">Technician: {w.technician}</p>
-                        )}
-                        {w.calendly_event_url && (
-                          <a
-                            href={w.calendly_event_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline mt-0.5 block"
-                          >
-                            Calendly Event →
-                          </a>
-                        )}
+                          )}
+                          {w.technician && (
+                            <span className="text-white/30">{w.technician}</span>
+                          )}
+                          {w.calendly_event_url && (
+                            <a
+                              href={w.calendly_event_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 transition-colors duration-150"
+                            >
+                              Booking link ↗
+                            </a>
+                          )}
+                          {buyer && (
+                            <Link
+                              href={`/admin/buyers/${buyer.id}`}
+                              className="text-gold-400/70 hover:text-gold-300 transition-colors duration-150"
+                            >
+                              Buyer profile →
+                            </Link>
+                          )}
+                        </div>
                       </div>
-
-                      {/* Buyer link */}
-                      {buyer && (
-                        <Link
-                          href={`/admin/buyers/${buyer.id}`}
-                          className="text-xs text-gray-400 hover:text-blue-700 flex-shrink-0"
-                        >
-                          Buyer Profile →
-                        </Link>
-                      )}
                     </div>
 
+                    {/* Inline editor */}
                     <WalkthroughEditor
                       id={w.id}
                       initialTechnician={w.technician}
@@ -154,63 +252,94 @@ export default async function AdminWalkthroughsPage() {
           )}
         </section>
 
-        {/* Past */}
+        {/* ── PAST & OTHER ── */}
         {past.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">
+            <h2 className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">
               Past & Other ({past.length})
             </h2>
-            <div className="space-y-3">
-              {past.map(w => {
-                const { date, time } = fmtDate(w.scheduled_at)
-                const buyer = w.buyers as unknown as { id: string; email: string; company_name: string | null } | null
-                const machine = w.machines as unknown as { id: string; name?: string; brand: string; model: string } | null
-                const machineName = machine?.name ?? (machine ? `${machine.brand} ${machine.model}` : null)
-                const st = statusConfig[w.status] ?? { label: w.status, classes: 'bg-gray-100 text-gray-600' }
 
-                return (
-                  <div key={w.id} className="bg-white border border-gray-100 rounded-lg p-4 opacity-80">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <div className="flex items-center gap-3">
-                        <div className="text-xs text-gray-500 font-medium min-w-[100px]">
-                          {date} {time}
-                        </div>
-                        <p className="text-sm font-medium text-gray-800">
-                          {buyer?.company_name || buyer?.email || '—'}
-                        </p>
-                        {machineName && (
-                          <p className="text-xs text-gray-400 hidden sm:block">{machineName}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {w.technician && (
-                          <span className="text-xs text-gray-400">{w.technician}</span>
-                        )}
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${st.classes}`}>
-                          {st.label}
-                        </span>
-                        {w.admin_notes && (
-                          <span className="text-xs text-gray-400 italic max-w-[200px] truncate hidden md:block">
-                            {w.admin_notes}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+            <div className="bg-navy-900 border border-white/8 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto scrollbar-hide">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b border-white/8">
+                      <th className="px-5 py-3 text-left text-[10px] font-bold text-white/30 uppercase tracking-widest">Buyer</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold text-white/30 uppercase tracking-widest hidden md:table-cell">Machine</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold text-white/30 uppercase tracking-widest">Scheduled</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold text-white/30 uppercase tracking-widest hidden lg:table-cell">Technician</th>
+                      <th className="px-5 py-3 text-left text-[10px] font-bold text-white/30 uppercase tracking-widest">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {past.map((w, i) => {
+                      const { full } = fmtDate(w.scheduled_at)
+                      const buyer   = w.buyers   as { id: string; email: string; company_name: string | null } | null
+                      const machine = w.machines as { id: string; name?: string; brand: string; model: string } | null
+                      const machineName = machine?.name ?? (machine ? `${machine.brand} ${machine.model}` : null)
+                      const st = STATUS[w.status] ?? { label: w.status, badge: 'bg-white/8 border-white/12 text-white/30' }
 
-                    <WalkthroughEditor
-                      id={w.id}
-                      initialTechnician={w.technician}
-                      initialStatus={w.status}
-                      initialNotes={w.admin_notes}
-                    />
-                  </div>
-                )
-              })}
+                      return (
+                        <tr key={w.id} className={`transition-colors duration-100 hover:bg-white/3 ${i % 2 === 0 ? '' : 'bg-white/[0.02]'}`}>
+                          <td className="px-5 py-3.5">
+                            {buyer ? (
+                              <Link href={`/admin/buyers/${buyer.id}`} className="group">
+                                <p className="font-medium text-white/75 group-hover:text-white transition-colors leading-tight">
+                                  {buyer.company_name || buyer.email}
+                                </p>
+                                {buyer.company_name && (
+                                  <p className="text-[11px] text-white/30 mt-0.5">{buyer.email}</p>
+                                )}
+                              </Link>
+                            ) : (
+                              <span className="text-white/25 italic text-xs">Unknown</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 hidden md:table-cell">
+                            {machineName && machine ? (
+                              <Link href={`/machines/${machine.id}`} target="_blank" className="text-white/45 hover:text-gold-300 transition-colors text-xs">
+                                {machineName}
+                              </Link>
+                            ) : (
+                              <span className="text-white/20 text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-white/40 text-xs font-mono whitespace-nowrap">
+                            {full}
+                          </td>
+                          <td className="px-5 py-3.5 hidden lg:table-cell text-white/35 text-xs">
+                            {w.technician || <span className="text-white/20 italic">Unassigned</span>}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide ${st.badge}`}>
+                              {st.label}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-5 py-3 border-t border-white/6 flex items-center justify-between">
+                <p className="text-[10px] text-white/20">{past.length} record{past.length !== 1 ? 's' : ''}</p>
+              </div>
             </div>
           </section>
         )}
 
       </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="bg-navy-950 border-t border-white/5 py-6 px-6 mt-auto">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+          <p className="text-xs text-white/20">BlueRock Equipment — Admin Operations</p>
+          <Link href="/admin" className="text-xs text-white/25 hover:text-white/50 transition-colors duration-150">
+            ← Dashboard
+          </Link>
+        </div>
+      </footer>
+
     </div>
   )
 }

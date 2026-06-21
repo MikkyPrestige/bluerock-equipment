@@ -9,7 +9,7 @@ export default function GenerateProformaButton({
   quoteId: string
   hasProforma: boolean
 }) {
-  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [state, setState]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [filePath, setFilePath] = useState<string | null>(null)
   const [errMsg, setErrMsg] = useState('')
 
@@ -17,18 +17,14 @@ export default function GenerateProformaButton({
     setState('loading')
     setErrMsg('')
     try {
-      const res = await fetch('/api/pdf/proforma-invoice', {
+      const res  = await fetch('/api/pdf/proforma-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quoteId }),
         credentials: 'include',
       })
       const json = await res.json()
-      if (!res.ok) {
-        setErrMsg(json.error || 'Generation failed')
-        setState('error')
-        return
-      }
+      if (!res.ok) { setErrMsg(json.error || 'Generation failed'); setState('error'); return }
       setFilePath(json.filePath)
       setState('done')
     } catch {
@@ -39,18 +35,20 @@ export default function GenerateProformaButton({
 
   if (state === 'done') {
     return (
-      <span className="text-sm text-green-700 font-medium">
-        Proforma generated — {filePath}
-      </span>
+      <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg">
+        ✓ Proforma generated — <span className="font-mono text-emerald-300">{filePath}</span>
+      </p>
     )
   }
 
   if (state === 'error') {
     return (
-      <span className="text-sm text-red-600">
+      <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
         {errMsg}{' '}
-        <button onClick={handleClick} className="underline">Retry</button>
-      </span>
+        <button onClick={handleClick} className="underline hover:text-red-300 transition-colors ml-1">
+          Retry
+        </button>
+      </p>
     )
   }
 
@@ -58,7 +56,7 @@ export default function GenerateProformaButton({
     <button
       onClick={handleClick}
       disabled={state === 'loading'}
-      className="bg-gray-900 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+      className="bg-navy-800 hover:bg-navy-700 disabled:opacity-50 border border-white/15 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all duration-150"
     >
       {state === 'loading'
         ? 'Generating…'

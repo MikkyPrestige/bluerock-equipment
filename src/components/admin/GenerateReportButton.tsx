@@ -11,25 +11,21 @@ export default function GenerateReportButton({
   machineId: string
   hasReport: boolean
 }) {
-  const [state, setState] = useState<State>('idle')
-  const [url, setUrl] = useState<string | null>(null)
-  const [errMsg, setErrMsg] = useState<string>('')
+  const [state, setState]   = useState<State>('idle')
+  const [url, setUrl]       = useState<string | null>(null)
+  const [errMsg, setErrMsg] = useState('')
 
   async function handleClick() {
     setState('loading')
     setErrMsg('')
     try {
-      const res = await fetch('/api/pdf/inspection-report', {
+      const res  = await fetch('/api/pdf/inspection-report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ machine_id: machineId }),
       })
       const json = await res.json()
-      if (!res.ok) {
-        setErrMsg(json.error || 'Generation failed')
-        setState('error')
-        return
-      }
+      if (!res.ok) { setErrMsg(json.error || 'Generation failed'); setState('error'); return }
       setUrl(json.url)
       setState('done')
     } catch {
@@ -44,18 +40,20 @@ export default function GenerateReportButton({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-green-700 hover:underline text-sm font-medium"
+        className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors duration-150"
       >
-        View Report
+        View Report ↗
       </a>
     )
   }
 
   if (state === 'error') {
     return (
-      <span className="text-red-600 text-xs">
+      <span className="text-xs text-red-400">
         {errMsg}{' '}
-        <button onClick={handleClick} className="underline">Retry</button>
+        <button onClick={handleClick} className="underline hover:text-red-300 transition-colors">
+          Retry
+        </button>
       </span>
     )
   }
@@ -64,13 +62,9 @@ export default function GenerateReportButton({
     <button
       onClick={handleClick}
       disabled={state === 'loading'}
-      className="text-sm font-medium text-blue-700 hover:underline disabled:text-gray-400 disabled:cursor-not-allowed"
+      className="text-xs font-semibold text-gold-400 hover:text-gold-300 disabled:text-white/25 disabled:cursor-wait transition-colors duration-150"
     >
-      {state === 'loading'
-        ? 'Generating…'
-        : hasReport
-          ? 'Regenerate'
-          : 'Generate Report'}
+      {state === 'loading' ? 'Generating…' : hasReport ? 'Regenerate' : 'Generate Report'}
     </button>
   )
 }

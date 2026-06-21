@@ -2,27 +2,19 @@ import { createClient } from '@/lib/supabase/server'
 import { adminSupabase } from '@/lib/supabase/admin'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import MilestoneTracker from '@/components/quote/MilestoneTracker'
-import DocumentVault from '@/components/quote/DocumentVault'
+import DocumentVault    from '@/components/quote/DocumentVault'
+import logo             from '@/assests/img/logo.jpg'
 
-const statusLabel: Record<string, string> = {
-  pending_quote:     'Awaiting Quote',
-  invoice_generated: 'Proforma Ready',
-  buyer_accepted:    'Accepted',
-  payment_pending:   'Payment Pending',
-  payment_confirmed: 'Payment Confirmed',
-  sold:              'Sold',
-  cancelled:         'Cancelled',
-}
-
-const statusColors: Record<string, string> = {
-  pending_quote:     'bg-amber-100 text-amber-800',
-  invoice_generated: 'bg-blue-100 text-blue-800',
-  buyer_accepted:    'bg-indigo-100 text-indigo-800',
-  payment_pending:   'bg-orange-100 text-orange-800',
-  payment_confirmed: 'bg-teal-100 text-teal-800',
-  sold:              'bg-green-100 text-green-800',
-  cancelled:         'bg-gray-100 text-gray-600',
+const STATUS: Record<string, { label: string; badge: string }> = {
+  pending_quote:     { label: 'Awaiting Quote',   badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated: { label: 'Proforma Ready',   badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  buyer_accepted:    { label: 'Accepted',          badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
+  payment_pending:   { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed: { label: 'Payment Confirmed', badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
+  sold:              { label: 'Sold',              badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled:         { label: 'Cancelled',         badge: 'bg-white/8 border-white/12 text-white/30' },
 }
 
 export default async function BuyerQuoteDetailPage({
@@ -40,7 +32,7 @@ export default async function BuyerQuoteDetailPage({
     .from('quotes')
     .select('*, machines(name, brand, model, year, category, price_usd, yard_city, yard_country), buyers(company_name)')
     .eq('id', id)
-    .eq('buyer_id', user.id) // enforce ownership
+    .eq('buyer_id', user.id)
     .single()
 
   if (error || !quote) notFound()
@@ -56,52 +48,97 @@ export default async function BuyerQuoteDetailPage({
     name: string; brand: string; model: string; year: number
     category: string; price_usd: number; yard_city: string; yard_country: string
   }
-  const lockDate   = quote.lock_expires_at ? new Date(quote.lock_expires_at) : null
-  const isExpired  = lockDate ? lockDate < new Date() : false
-  const hoursLeft  = lockDate && !isExpired ? Math.ceil((lockDate.getTime() - Date.now()) / 3600000) : 0
+  const machineName = m.name || `${m.brand} ${m.model}`
+
+  const lockDate  = quote.lock_expires_at ? new Date(quote.lock_expires_at) : null
+  const isExpired = lockDate ? lockDate < new Date() : false
+  const hoursLeft = lockDate && !isExpired ? Math.ceil((lockDate.getTime() - Date.now()) / 3600000) : 0
+
+  const status = STATUS[quote.status] ?? { label: quote.status, badge: 'bg-white/8 border-white/12 text-white/40' }
+
+  const displayPrice = quote.total_amount
+    ? `$${Number(quote.total_amount).toLocaleString()}`
+    : `$${Number(m.price_usd).toLocaleString()} + freight`
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-900">← Dashboard</Link>
-          <h1 className="text-lg font-bold text-gray-900">Quote — PRF-{id.substring(0, 8).toUpperCase()}</h1>
-          <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase ${statusColors[quote.status] || 'bg-gray-100 text-gray-600'}`}>
-            {statusLabel[quote.status] ?? quote.status}
-          </span>
+    <div className="min-h-screen bg-navy-950 flex flex-col">
+
+      {/* ── NAV ── */}
+      <header className="sticky top-0 z-50 bg-navy-950/96 backdrop-blur-md border-b border-white/8 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link href="/">
+            <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain invert opacity-90" />
+          </Link>
+          <div className="hidden sm:flex items-center gap-2 text-sm text-white/30">
+            <Link href="/dashboard" className="hover:text-white transition-colors duration-150">← Dashboard</Link>
+            <span>/</span>
+            <span className="text-white/50">PRF-{id.slice(0, 8).toUpperCase()}</span>
+          </div>
         </div>
+        <Link href="/dashboard" className="text-sm text-white/35 hover:text-white sm:hidden transition-colors">
+          ← Back
+        </Link>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-
-        {/* Summary */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Equipment</h2>
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xl font-bold text-gray-900">{m.name}</p>
-              <p className="text-sm text-gray-500 mt-1">{m.year} · {m.category} · {m.yard_city}, {m.yard_country}</p>
+      {/* ── PAGE TITLE ── */}
+      <div className="bg-navy-900 border-b border-white/8 px-6 py-5">
+        <div className="max-w-3xl mx-auto flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs text-gold-400 font-semibold uppercase tracking-widest mb-1.5">Quote Reference</p>
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-xl sm:text-2xl font-bold text-white">
+                PRF-{id.slice(0, 8).toUpperCase()}
+              </h1>
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide ${status.badge}`}>
+                {status.label}
+              </span>
             </div>
-            <div className="text-right">
-              <p className="text-xl font-bold text-blue-700">
-                {quote.total_amount
-                  ? `$${Number(quote.total_amount).toLocaleString()}`
-                  : `$${Number(m.price_usd).toLocaleString()} +freight`}
+          </div>
+        </div>
+      </div>
+
+      <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 flex flex-col gap-5">
+
+        {/* Equipment summary */}
+        <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+          <p className="text-xs font-bold text-white/35 uppercase tracking-widest mb-4">Equipment</p>
+
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <h2 className="font-display text-xl sm:text-2xl font-bold text-white leading-tight">{machineName}</h2>
+              <p className="text-white/40 text-sm mt-1.5">
+                {m.year} · {m.category} · {m.yard_city}, {m.yard_country}
               </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="font-display text-2xl font-bold text-gold-400">{displayPrice}</p>
               {quote.total_amount && (
-                <p className="text-xs text-gray-400 mt-1">incl. freight & customs est.</p>
+                <p className="text-white/25 text-xs mt-1">incl. freight & customs est.</p>
               )}
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div className="bg-gray-50 rounded-md px-3 py-2">
-              <p className="text-xs text-gray-400 mb-0.5">Port of Discharge</p>
-              <p className="font-medium text-gray-900">{quote.port_of_discharge || '—'}</p>
+          {/* Meta grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-navy-950/50 border border-white/6 rounded-xl px-4 py-3">
+              <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">Port of Discharge</p>
+              <p className="text-white text-sm font-semibold">{quote.port_of_discharge || '—'}</p>
             </div>
-            <div className={`rounded-md px-3 py-2 ${isExpired ? 'bg-red-50' : 'bg-gray-50'}`}>
-              <p className="text-xs text-gray-400 mb-0.5">48-Hour Price Lock</p>
-              <p className={`font-medium ${isExpired ? 'text-red-600' : 'text-gray-900'}`}>
+            <div className={`border rounded-xl px-4 py-3 ${
+              isExpired
+                ? 'bg-red-500/8 border-red-500/20'
+                : hoursLeft <= 12 && hoursLeft > 0
+                  ? 'bg-orange-500/8 border-orange-500/20'
+                  : 'bg-navy-950/50 border-white/6'
+            }`}>
+              <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">48-Hour Price Lock</p>
+              <p className={`text-sm font-semibold ${
+                isExpired ? 'text-red-400' :
+                hoursLeft <= 6  ? 'text-red-400' :
+                hoursLeft <= 12 ? 'text-orange-400' :
+                hoursLeft <= 24 ? 'text-amber-400' :
+                                  'text-emerald-400'
+              }`}>
                 {isExpired
                   ? 'Expired'
                   : hoursLeft > 0
@@ -113,21 +150,41 @@ export default async function BuyerQuoteDetailPage({
         </div>
 
         {/* Milestone Tracker */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-6">Transaction Progress</h2>
+        <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+          <p className="text-xs font-bold text-white/35 uppercase tracking-widest mb-6">Transaction Progress</p>
           <MilestoneTracker currentPhase={quote.milestone_phase ?? 0} />
         </div>
 
         {/* Document Vault */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Document Vault</h2>
-          <p className="text-xs text-gray-400 mb-4">
-            All documents are stored securely. Download links expire after 1 hour for security.
+        <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-bold text-white/35 uppercase tracking-widest">Document Vault</p>
+            {documents && documents.length > 0 && (
+              <span className="text-[10px] text-gold-400 bg-gold-400/12 border border-gold-400/20 px-2.5 py-0.5 rounded-full font-semibold">
+                {documents.filter(d => !d.superseded_at).length} active
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-white/25 mb-4 leading-relaxed">
+            Download links expire after 1 hour for security. Regenerate if needed.
           </p>
           <DocumentVault documents={documents ?? []} />
         </div>
 
       </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="bg-navy-950 border-t border-white/5 py-8 px-6 mt-auto">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <Link href="/">
+            <Image src={logo} alt="BlueRock Equipment" className="h-8 w-auto object-contain invert opacity-75" />
+          </Link>
+          <nav className="flex gap-5 text-xs text-white/30">
+            <Link href="/dashboard" className="hover:text-white transition-colors duration-150">Dashboard</Link>
+            <Link href="/machines"  className="hover:text-white transition-colors duration-150">Inventory</Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   )
 }

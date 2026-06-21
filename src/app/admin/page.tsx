@@ -1,43 +1,62 @@
 import { adminSupabase } from '@/lib/supabase/admin'
 import Link from 'next/link'
+import Image from 'next/image'
+import logo from '@/assests/img/logo.jpg'
 
+/* ── Admin section cards ── */
 const NAV = [
   {
     href: '/admin/inventory',
     label: 'Inventory',
+    tag: 'Fleet',
     desc: 'Add machines, generate inspection reports, manage listings',
-    action: '+ Add Machine',
-    actionHref: '/admin/inventory/new',
+    primary: { label: 'Open Inventory', href: '/admin/inventory' },
+    secondary: { label: '+ Add Machine', href: '/admin/inventory/new' },
   },
   {
     href: '/admin/quotes',
     label: 'Quotes',
+    tag: 'Transactions',
     desc: 'Review quote requests, set pricing, generate proforma invoices',
-    action: null,
-    actionHref: null,
+    primary: { label: 'Open Quotes', href: '/admin/quotes' },
+    secondary: null,
   },
   {
     href: '/admin/buyers',
     label: 'Buyers',
+    tag: 'Community',
     desc: 'Manage buyer tiers, KYC verification, and arrival alerts',
-    action: null,
-    actionHref: null,
+    primary: { label: 'Open Buyers', href: '/admin/buyers' },
+    secondary: null,
   },
   {
     href: '/admin/walkthroughs',
     label: 'Walkthroughs',
+    tag: 'Schedule',
     desc: 'Log Calendly bookings, assign technicians, add post-call notes',
-    action: null,
-    actionHref: null,
+    primary: { label: 'Open Walkthroughs', href: '/admin/walkthroughs' },
+    secondary: null,
   },
   {
     href: '/admin/freight-rates',
     label: 'Freight Rates',
+    tag: 'Logistics',
     desc: 'Edit destination port base costs — refresh monthly with shipping partners',
-    action: null,
-    actionHref: null,
+    primary: { label: 'Open Rates', href: '/admin/freight-rates' },
+    secondary: null,
   },
 ]
+
+/* ── Status badges (dark-adapted) ── */
+const STATUS: Record<string, { label: string; badge: string }> = {
+  pending_quote:     { label: 'Awaiting Quote',   badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated: { label: 'Proforma Ready',   badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  buyer_accepted:    { label: 'Accepted',          badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
+  payment_pending:   { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed: { label: 'Payment Confirmed', badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
+  sold:              { label: 'Sold',              badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled:         { label: 'Cancelled',         badge: 'bg-white/8 border-white/12 text-white/30' },
+}
 
 export default async function AdminDashboardPage() {
   const [
@@ -53,67 +72,96 @@ export default async function AdminDashboardPage() {
       .from('quotes')
       .select('id, status, created_at, machines(name, brand, model), buyers(company_name, email)')
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(8),
   ])
 
-  const statusColors: Record<string, string> = {
-    pending_quote:     'bg-amber-100 text-amber-800',
-    invoice_generated: 'bg-blue-100 text-blue-800',
-    buyer_accepted:    'bg-indigo-100 text-indigo-800',
-    payment_pending:   'bg-orange-100 text-orange-800',
-    payment_confirmed: 'bg-teal-100 text-teal-800',
-    sold:              'bg-green-100 text-green-800',
-    cancelled:         'bg-gray-100 text-gray-600',
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">BlueRock Admin</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Operations Dashboard</p>
+    <div className="min-h-screen bg-navy-950 flex flex-col">
+
+      {/* ── HEADER ── */}
+      <header className="sticky top-0 z-50 bg-navy-950/96 backdrop-blur-md border-b border-white/8 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/">
+            <Image src={logo} alt="BlueRock Equipment" className="h-9 w-auto object-contain invert opacity-90" />
+          </Link>
+          <div className="hidden sm:block h-5 w-px bg-white/10" />
+          <div className="hidden sm:block">
+            <h1 className="font-display text-lg font-bold text-white leading-tight">BlueRock Admin</h1>
+            <p className="text-[10px] text-gold-400 font-semibold uppercase tracking-widest">Operations Dashboard</p>
+          </div>
         </div>
-        <Link href="/machines" className="text-sm text-gray-500 hover:text-gray-900">
-          View Public Site →
-        </Link>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/machines"
+            className="text-xs font-semibold text-gold-400 hover:text-gold-300 border border-gold-400/30 hover:border-gold-400/55 px-3 py-1.5 rounded-lg transition-all duration-150 hidden sm:inline-flex items-center gap-1.5"
+          >
+            View Public Site →
+          </Link>
+          <Link
+            href="/dashboard"
+            className="text-xs text-white/35 hover:text-white/70 transition-colors duration-150"
+          >
+            Buyer Dashboard
+          </Link>
+        </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 space-y-8">
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Active Machines</p>
-            <p className="text-3xl font-bold text-gray-900">{machineCount ?? 0}</p>
+        {/* ── STATS ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-navy-900 border border-white/8 rounded-2xl px-6 py-5">
+            <p className="text-[10px] font-bold text-white/35 uppercase tracking-widest mb-3">Active Machines</p>
+            <p className="font-display text-4xl font-bold text-gold-400">{machineCount ?? 0}</p>
+            <p className="text-white/25 text-xs mt-2">in yard, excluding sold</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Pending Quotes</p>
-            <p className="text-3xl font-bold text-amber-600">{quoteCount ?? 0}</p>
+
+          <div className="bg-navy-900 border border-amber-500/20 rounded-2xl px-6 py-5 relative overflow-hidden">
+            {/* Attention accent for pending quotes */}
+            {(quoteCount ?? 0) > 0 && (
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/60 via-amber-400/80 to-amber-500/60" />
+            )}
+            <p className="text-[10px] font-bold text-white/35 uppercase tracking-widest mb-3">Pending Quotes</p>
+            <p className={`font-display text-4xl font-bold ${(quoteCount ?? 0) > 0 ? 'text-amber-400' : 'text-gold-400'}`}>
+              {quoteCount ?? 0}
+            </p>
+            <p className="text-white/25 text-xs mt-2">awaiting your response</p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Registered Buyers</p>
-            <p className="text-3xl font-bold text-gray-900">{buyerCount ?? 0}</p>
-            <p className="text-xs text-gray-400 mt-1">of 10 max</p>
+
+          <div className="bg-navy-900 border border-white/8 rounded-2xl px-6 py-5">
+            <p className="text-[10px] font-bold text-white/35 uppercase tracking-widest mb-3">Registered Buyers</p>
+            <p className="font-display text-4xl font-bold text-gold-400">{buyerCount ?? 0}</p>
+            <p className="text-white/25 text-xs mt-2">of max capacity</p>
           </div>
         </div>
 
-        {/* Quick Nav */}
+        {/* ── ADMIN SECTIONS ── */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Admin Sections</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {NAV.map(({ href, label, desc, action, actionHref }) => (
-              <div key={href} className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col">
-                <Link href={href} className="font-bold text-gray-900 text-base hover:text-blue-700 hover:underline">
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">Admin Sections</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {NAV.map(({ href, label, tag, desc, primary, secondary }) => (
+              <div key={href} className="bg-navy-900 border border-white/8 rounded-2xl p-5 flex flex-col hover:border-white/15 transition-colors duration-150 group">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold text-gold-400/60 uppercase tracking-widest">{tag}</span>
+                </div>
+                <Link href={href} className="font-display font-bold text-white text-lg leading-tight mb-2 group-hover:text-gold-300 transition-colors duration-150">
                   {label}
                 </Link>
-                <p className="text-xs text-gray-500 mt-1 flex-1">{desc}</p>
-                <div className="mt-4 flex gap-3">
-                  <Link href={href} className="text-xs text-blue-700 font-medium hover:underline">
-                    Open →
+                <p className="text-xs text-white/35 leading-relaxed flex-1 mb-4">{desc}</p>
+                <div className="flex items-center gap-4 pt-4 border-t border-white/6">
+                  <Link
+                    href={primary.href}
+                    className="text-xs font-semibold text-gold-400 hover:text-gold-300 transition-colors duration-150"
+                  >
+                    {primary.label} →
                   </Link>
-                  {action && actionHref && (
-                    <Link href={actionHref} className="text-xs text-gray-500 hover:underline">
-                      {action}
+                  {secondary && (
+                    <Link
+                      href={secondary.href}
+                      className="text-xs text-white/30 hover:text-white/60 border border-white/10 hover:border-white/25 px-2.5 py-1 rounded-lg transition-all duration-150"
+                    >
+                      {secondary.label}
                     </Link>
                   )}
                 </div>
@@ -122,50 +170,63 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Quotes */}
+        {/* ── RECENT QUOTES ── */}
         {recentQuotes && recentQuotes.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Recent Quotes</h2>
-              <Link href="/admin/quotes" className="text-xs text-blue-700 hover:underline">View all →</Link>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Recent Quotes</p>
+              <Link href="/admin/quotes" className="text-xs font-semibold text-gold-400 hover:text-gold-300 transition-colors duration-150">
+                View all →
+              </Link>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
+
+            <div className="bg-navy-900 border border-white/8 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto scrollbar-hide">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Quote</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Buyer</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Machine</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600"></th>
+                  <thead>
+                    <tr className="border-b border-white/8 bg-navy-800">
+                      <th className="px-5 py-3.5 text-left text-[10px] font-bold text-white/35 uppercase tracking-widest">Quote</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-bold text-white/35 uppercase tracking-widest">Buyer</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-bold text-white/35 uppercase tracking-widest hidden md:table-cell">Machine</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-bold text-white/35 uppercase tracking-widest">Status</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-bold text-white/35 uppercase tracking-widest hidden sm:table-cell">Date</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-bold text-white/35 uppercase tracking-widest"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {recentQuotes.map(q => {
+                  <tbody>
+                    {recentQuotes.map((q, i) => {
                       const m = q.machines as unknown as { name?: string; brand: string; model: string } | null
-                      const b = q.buyers as unknown as { company_name: string | null; email: string } | null
+                      const b = q.buyers  as unknown as { company_name: string | null; email: string } | null
+                      const s = STATUS[q.status] ?? { label: q.status.replace(/_/g, ' '), badge: 'bg-white/8 border-white/12 text-white/40' }
+
                       return (
-                        <tr key={q.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                            {q.id.substring(0, 8).toUpperCase()}
+                        <tr
+                          key={q.id}
+                          className={`border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors duration-100 ${i % 2 === 1 ? 'bg-white/[0.015]' : ''}`}
+                        >
+                          <td className="px-5 py-3.5 font-mono text-xs text-white/35 whitespace-nowrap">
+                            {q.id.slice(0, 8).toUpperCase()}
                           </td>
-                          <td className="px-4 py-3 text-gray-700">{b?.company_name || b?.email || '—'}</td>
-                          <td className="px-4 py-3 text-gray-700">
+                          <td className="px-5 py-3.5 text-white/65 text-sm max-w-[140px] truncate">
+                            {b?.company_name || b?.email || '—'}
+                          </td>
+                          <td className="px-5 py-3.5 text-white/65 text-sm hidden md:table-cell max-w-[180px] truncate">
                             {m?.name || (m ? `${m.brand} ${m.model}` : '—')}
                           </td>
-                          <td className="px-4 py-3">
-                            <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase ${statusColors[q.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                              {q.status.replace(/_/g, ' ')}
+                          <td className="px-5 py-3.5 whitespace-nowrap">
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide ${s.badge}`}>
+                              {s.label}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-400">
+                          <td className="px-5 py-3.5 text-white/30 text-xs hidden sm:table-cell whitespace-nowrap">
                             {new Date(q.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </td>
-                          <td className="px-4 py-3">
-                            <Link href={`/admin/quotes/${q.id}`} className="text-blue-700 hover:underline text-xs font-medium">
-                              Open
+                          <td className="px-5 py-3.5">
+                            <Link
+                              href={`/admin/quotes/${q.id}`}
+                              className="text-xs font-semibold text-gold-400 hover:text-gold-300 transition-colors duration-150 whitespace-nowrap"
+                            >
+                              Open →
                             </Link>
                           </td>
                         </tr>
@@ -179,6 +240,20 @@ export default async function AdminDashboardPage() {
         )}
 
       </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="bg-navy-950 border-t border-white/5 py-6 px-6 mt-auto">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <p className="text-xs text-white/20">BlueRock Equipment — Admin Operations</p>
+          <nav className="flex gap-5 text-xs text-white/25">
+            <Link href="/admin/inventory"    className="hover:text-white/60 transition-colors">Inventory</Link>
+            <Link href="/admin/quotes"       className="hover:text-white/60 transition-colors">Quotes</Link>
+            <Link href="/admin/buyers"       className="hover:text-white/60 transition-colors">Buyers</Link>
+            <Link href="/admin/walkthroughs" className="hover:text-white/60 transition-colors">Walkthroughs</Link>
+            <Link href="/admin/freight-rates"className="hover:text-white/60 transition-colors">Freight</Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   )
 }
