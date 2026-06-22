@@ -26,7 +26,33 @@ async function getExecutablePath(): Promise<string> {
   )
 }
 
-export async function generatePDF(html: string): Promise<Uint8Array> {
+/* Copy Puppeteer's Buffer (Uint8Array<ArrayBufferLike>) into a clean
+   Uint8Array<ArrayBuffer> so it satisfies BlobPart / BodyInit. */
+function toCleanUint8Array(src: Uint8Array): Uint8Array<ArrayBuffer> {
+  const dst = new Uint8Array(src.byteLength)
+  dst.set(src)
+  return dst as Uint8Array<ArrayBuffer>
+}
+
+export async function generateScreenshot(html: string, viewportWidth = 1200): Promise<Uint8Array<ArrayBuffer>> {
+  const executablePath = await getExecutablePath()
+  let browser
+  try {
+    browser = await puppeteer.launch(
+      IS_PROD
+        ? { args: chromium.args, defaultViewport: { width: viewportWidth, height: 900 }, executablePath, headless: true }
+        : { executablePath, headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'], defaultViewport: { width: viewportWidth, height: 900 } }
+    )
+    const page = await browser.newPage()
+    await page.setContent(html, { waitUntil: 'domcontentloaded' })
+    const shot = await page.screenshot({ type: 'png', fullPage: true })
+    return toCleanUint8Array(shot as Uint8Array)
+  } finally {
+    if (browser) await browser.close()
+  }
+}
+
+export async function generatePDF(html: string): Promise<Uint8Array<ArrayBuffer>> {
   const executablePath = await getExecutablePath()
   let browser
   try {
@@ -52,7 +78,7 @@ export async function generatePDF(html: string): Promise<Uint8Array> {
       printBackground: true,
       margin: { top: '0', right: '0', bottom: '0', left: '0' },
     })
-    return pdf
+    return toCleanUint8Array(pdf as Uint8Array)
   } finally {
     if (browser) await browser.close()
   }

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
 import trustHeroImg from '@/assests/img/machinery/trust-hub-aerial-construction-site.jpg'
+import NavSignOutButton from '@/components/NavSignOutButton'
 
 export const metadata: Metadata = {
   title: 'Trust & Verification Hub',
@@ -97,7 +99,11 @@ const BUYER_PROTECTION = [
   },
 ]
 
-export default function TrustPage() {
+export default async function TrustPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const isAdmin = !!user && user.email === process.env.ADMIN_EMAIL
+
   const totalChecks = INSPECTION_CATEGORIES.reduce((s, c) => s + c.count, 0)
 
   return (
@@ -116,13 +122,31 @@ export default function TrustPage() {
           </div>
           <nav className="flex items-center gap-5 sm:gap-7">
             <Link href="/machines" className="text-sm text-white/55 hover:text-white hidden sm:block transition-colors duration-150">Inventory</Link>
-            <Link href="/auth/login" className="text-sm text-white/55 hover:text-white hidden sm:block transition-colors duration-150">Sign In</Link>
-            <Link
-              href="/machines"
-              className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-5 py-2.5 rounded transition-colors duration-150 shadow-lg shadow-black/30"
-            >
-              Browse Inventory
-            </Link>
+            {user ? (
+              <>
+                <Link href="/dashboard" className="text-sm text-white/55 hover:text-white hidden sm:block transition-colors duration-150">
+                  Dashboard
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" className="text-sm text-gold-400 hover:text-gold-300 hidden sm:block transition-colors duration-150">
+                    Admin Panel
+                  </Link>
+                )}
+                <NavSignOutButton className="text-sm text-white/55 hover:text-white transition-colors duration-150" />
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login" className="text-sm text-white/55 hover:text-white hidden sm:block transition-colors duration-150">
+                  Sign In
+                </Link>
+                <Link
+                  href="/machines"
+                  className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-5 py-2.5 rounded transition-colors duration-150 shadow-lg shadow-black/30"
+                >
+                  Browse Inventory
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>

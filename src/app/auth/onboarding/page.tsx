@@ -1,141 +1,192 @@
 'use client'
+
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
+import logo   from '@/assests/img/logo.jpg'
+import bgImg  from '@/assests/img/machinery/freight-port-crane-containers.jpg'
+
+const INP = [
+  'w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm text-navy-900',
+  'placeholder:text-slate-400 focus:outline-none focus:border-gold-400',
+  'focus:ring-2 focus:ring-gold-400/15 transition-all duration-150',
+].join(' ')
+
+const LBL = 'block text-xs font-semibold text-slate-600 mb-2'
+
+const REQ = <span className="text-gold-400 ml-0.5">*</span>
 
 export default function OnboardingPage() {
-    const supabase = createClient()
-    const router = useRouter()
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState('')
-    const [form, setForm] = useState({
-        company_name: '',
-        corporate_address: '',
-        import_export_license: '',
-        preferred_port_of_discharge: '',
-    })
+  const supabase = createClient()
+  const router   = useRouter()
 
-    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  const [loading, setLoading] = useState(false)
+  const [error,   setError]   = useState('')
+  const [form, setForm] = useState({
+    company_name:                '',
+    corporate_address:           '',
+    import_export_license:       '',
+    preferred_port_of_discharge: '',
+  })
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/auth/login'); return }
+
+    const { error: updateError } = await supabase
+      .from('buyers')
+      .update({
+        company_name:                form.company_name,
+        corporate_address:           form.corporate_address,
+        import_export_license:       form.import_export_license,
+        preferred_port_of_discharge: form.preferred_port_of_discharge,
+        tier:         'silver',
+        kyc_verified: false,
+      })
+      .eq('id', user.id)
+
+    if (updateError) {
+      setError(updateError.message)
+      setLoading(false)
+      return
     }
 
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault()
-        setLoading(true)
-        setError('')
+    router.push('/dashboard')
+  }
 
-        const { data: { user } } = await supabase.auth.getUser()
+  return (
+    <div className="min-h-screen relative flex items-center justify-center bg-navy-950 px-4 py-12 overflow-hidden">
 
-        if (!user) {
-            router.push('/auth/login')
-            return
-        }
+      {/* Subtle background photo */}
+      <Image
+        src={bgImg}
+        alt=""
+        fill
+        className="object-cover opacity-[0.07]"
+        priority
+        aria-hidden="true"
+      />
 
-        const { error: updateError } = await supabase
-            .from('buyers')
-            .update({
-                company_name: form.company_name,
-                corporate_address: form.corporate_address,
-                import_export_license: form.import_export_license,
-                preferred_port_of_discharge: form.preferred_port_of_discharge,
-                tier: 'silver',
-                kyc_verified: false, // admin approves this manually
-            })
-            .eq('id', user.id)
+      {/* Vignette */}
+      <div className="absolute inset-0 bg-gradient-to-b from-navy-950/70 via-transparent to-navy-950/80 pointer-events-none" />
 
-        if (updateError) {
-            setError(updateError.message)
-            setLoading(false)
-            return
-        }
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-lg">
+        <div className="bg-white rounded-2xl shadow-2xl shadow-black/50 px-8 py-10 sm:px-10 sm:py-12">
 
-        router.push('/dashboard')
-    }
+          {/* Logo + step indicator */}
+          <div className="flex flex-col items-center mb-8">
+            <Link href="/">
+              <Image
+                src={logo}
+                alt="BlueRock Equipment"
+                className="h-12 w-auto object-contain"
+              />
+            </Link>
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-            <div className="w-full max-w-lg">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Complete your buyer profile</h1>
-                    <p className="text-gray-500 text-sm mb-8">
-                        This information is required to request delivery quotes. It is collected once and pre-filled on all future requests.
-                    </p>
+            <div className="w-8 h-0.5 bg-gold-400 mt-5 mb-5" />
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Company name <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="company_name"
-                                value={form.company_name}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Acme Construction Ltd"
-                            />
-                        </div>
+            <p className="text-[10px] font-bold text-gold-500 uppercase tracking-widest mb-3">
+              Step 2 of 2
+            </p>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Corporate address <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="corporate_address"
-                                value={form.corporate_address}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="123 Business District, Lagos, Nigeria"
-                            />
-                        </div>
+            <h1 className="font-display text-2xl font-bold text-navy-900 text-center leading-tight">
+              Complete your buyer profile
+            </h1>
+            <p className="text-slate-500 text-sm mt-2.5 text-center leading-relaxed max-w-sm">
+              Required to request delivery quotes. Collected once and pre-filled on all future requests.
+            </p>
+          </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Import / Export license number <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="import_export_license"
-                                value={form.import_export_license}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="IMP-2024-XXXXX"
-                            />
-                        </div>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Preferred port of discharge <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="preferred_port_of_discharge"
-                                value={form.preferred_port_of_discharge}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Port of Lagos, Nigeria"
-                            />
-                        </div>
-
-                        {error && (
-                            <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-md">{error}</p>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? 'Saving...' : 'Complete profile and continue'}
-                        </button>
-                    </form>
-                </div>
+            <div>
+              <label className={LBL}>Company name{REQ}</label>
+              <input
+                type="text"
+                name="company_name"
+                value={form.company_name}
+                onChange={handleChange}
+                required
+                className={INP}
+                placeholder="Acme Construction Ltd"
+              />
             </div>
+
+            <div>
+              <label className={LBL}>Corporate address{REQ}</label>
+              <input
+                type="text"
+                name="corporate_address"
+                value={form.corporate_address}
+                onChange={handleChange}
+                required
+                className={INP}
+                placeholder="123 Business District, Lagos, Nigeria"
+              />
+            </div>
+
+            <div>
+              <label className={LBL}>Import / Export license number{REQ}</label>
+              <input
+                type="text"
+                name="import_export_license"
+                value={form.import_export_license}
+                onChange={handleChange}
+                required
+                className={INP}
+                placeholder="IMP-2024-XXXXX"
+              />
+            </div>
+
+            <div>
+              <label className={LBL}>Preferred port of discharge{REQ}</label>
+              <input
+                type="text"
+                name="preferred_port_of_discharge"
+                value={form.preferred_port_of_discharge}
+                onChange={handleChange}
+                required
+                className={INP}
+                placeholder="Port of Lagos, Nigeria"
+              />
+            </div>
+
+            {error && (
+              <p className="text-red-600 text-sm bg-red-50 border border-red-100 px-4 py-2.5 rounded-xl">
+                {error}
+              </p>
+            )}
+
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gold-400 hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed text-navy-950 font-bold py-3 px-4 rounded-xl text-sm transition-colors duration-150 shadow-md shadow-gold-400/20"
+              >
+                {loading ? 'Saving…' : 'Complete profile and continue'}
+              </button>
+            </div>
+
+            <p className="text-center text-xs text-slate-400 pt-1">
+              Your information is stored securely and only used for trade documentation.
+            </p>
+
+          </form>
         </div>
-    )
+      </div>
+
+    </div>
+  )
 }

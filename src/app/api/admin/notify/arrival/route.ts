@@ -63,19 +63,25 @@ export async function POST(request: NextRequest) {
 </body>
 </html>`
 
+  const fromAddress = process.env.RESEND_FROM_EMAIL
+    ?? 'BlueRock Equipment <onboarding@resend.dev>'
+
   if (!process.env.RESEND_API_KEY) {
     console.warn('[notify/arrival] RESEND_API_KEY not set — skipping email send')
   } else {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const { error: emailErr } = await resend.emails.send({
-      from: 'BlueRock Equipment <notifications@bluerockequipment.com>',
+      from: fromAddress,
       to: buyer_email,
       subject: `Similar ${machine_category} Now Available — BlueRock Equipment`,
       html,
     })
     if (emailErr) {
-      console.error('[notify/arrival] Resend error:', emailErr)
-      return NextResponse.json({ error: 'Email delivery failed' }, { status: 502 })
+      console.error('[notify/arrival] Resend error:', JSON.stringify(emailErr))
+      return NextResponse.json(
+        { error: `Email delivery failed: ${(emailErr as { message?: string }).message ?? JSON.stringify(emailErr)}` },
+        { status: 502 }
+      )
     }
   }
 

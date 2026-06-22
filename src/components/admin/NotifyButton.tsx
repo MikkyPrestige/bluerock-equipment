@@ -15,12 +15,14 @@ export default function NotifyButton({
   machineName: string
   machineCategory: string
 }) {
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [state,  setState]  = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [errMsg, setErrMsg] = useState('')
 
   async function handleNotify() {
     setState('sending')
+    setErrMsg('')
     try {
-      const res = await fetch('/api/admin/notify/arrival', {
+      const res  = await fetch('/api/admin/notify/arrival', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -32,8 +34,15 @@ export default function NotifyButton({
         }),
         credentials: 'include',
       })
-      setState(res.ok ? 'sent' : 'error')
+      if (res.ok) {
+        setState('sent')
+      } else {
+        const json = await res.json().catch(() => ({}))
+        setErrMsg(json.error ?? 'Unknown error')
+        setState('error')
+      }
     } catch {
+      setErrMsg('Network error')
       setState('error')
     }
   }
@@ -41,11 +50,20 @@ export default function NotifyButton({
   if (state === 'sent') {
     return <span className="text-xs font-semibold text-emerald-400">✓ Notified</span>
   }
+
   if (state === 'error') {
     return (
-      <button onClick={handleNotify} className="text-xs text-red-400 hover:text-red-300 transition-colors">
-        Failed — retry
-      </button>
+      <div className="space-y-1">
+        <button
+          onClick={handleNotify}
+          className="text-xs text-red-400 hover:text-red-300 transition-colors font-semibold"
+        >
+          Failed — retry
+        </button>
+        {errMsg && (
+          <p className="text-[10px] text-red-400/70 max-w-[200px] leading-tight">{errMsg}</p>
+        )}
+      </div>
     )
   }
 

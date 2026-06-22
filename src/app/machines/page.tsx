@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { adminSupabase } from '@/lib/supabase/admin'
 import MachineCard from '@/components/machine/MachineCard'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
+import NavSignOutButton from '@/components/NavSignOutButton'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
@@ -99,6 +100,7 @@ export default async function MachinesPage({
   const params = await searchParams
 
   const { data: { user } } = await supabase.auth.getUser()
+  const isAdmin = !!user && user.email === process.env.ADMIN_EMAIL
 
   let query = supabase
     .from('machines')
@@ -165,9 +167,17 @@ export default async function MachinesPage({
               Trust Hub
             </Link>
             {user ? (
-              <Link href="/dashboard" className="text-sm text-white/45 hover:text-white transition-colors duration-150">
-                Dashboard
-              </Link>
+              <>
+                <Link href="/dashboard" className="text-sm text-white/55 hover:text-white hidden sm:block transition-colors duration-150">
+                  Dashboard
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin" className="text-sm text-gold-400 hover:text-gold-300 hidden sm:block transition-colors duration-150">
+                    Admin Panel
+                  </Link>
+                )}
+                <NavSignOutButton className="text-sm text-white/55 hover:text-white transition-colors duration-150" />
+              </>
             ) : (
               <Link href="/auth/login" className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-4 py-2 rounded transition-colors duration-150 shadow-md shadow-black/30">
                 Sign In

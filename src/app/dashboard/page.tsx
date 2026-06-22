@@ -3,7 +3,8 @@ import { adminSupabase } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import SignOutButton from './signout-button'
+import SignOutButton          from './signout-button'
+import WatchlistExportButtons from '@/components/dashboard/WatchlistExportButtons'
 import logo         from '@/assests/img/logo.jpg'
 import excImg       from '@/assests/img/machinery/machine-card-excavator-openpit.jpg'
 import bullImg      from '@/assests/img/machinery/machine-card-bulldozer-field.jpg'
@@ -293,9 +294,12 @@ export default async function DashboardPage() {
                 label="Watchlist & Alerts"
                 count={savedCount || undefined}
                 action={
-                  <Link href="/machines" className="text-xs text-gold-400 hover:text-gold-300 transition-colors">
-                    View all →
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <WatchlistExportButtons count={savedCount} />
+                    <Link href="/dashboard/watchlist" className="text-xs text-gold-400 hover:text-gold-300 transition-colors">
+                      View all →
+                    </Link>
+                  </div>
                 }
               />
 
