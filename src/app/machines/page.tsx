@@ -2,15 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { adminSupabase } from '@/lib/supabase/admin'
 import MachineCard from '@/components/machine/MachineCard'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
+import MobileFilterDrawer from '@/components/machine/MobileFilterDrawer'
 import NavSignOutButton from '@/components/NavSignOutButton'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
 import heroImg from '@/assests/img/machinery/machine-detail-excavator-urban-site.jpg'
 
-const CATEGORIES = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
+const CATEGORIES = ['Excavators', 'Bulldozers', 'Wheel Loaders', 'Motor Graders', 'Articulated Trucks']
 const BRANDS    = ['Caterpillar', 'Komatsu', 'Volvo', 'Sany', 'Hitachi', 'Liebherr']
-const USE_CASES = ['Construction', 'Mining & Quarrying', 'Port Operations', 'Agriculture', 'Road Building']
+const USE_CASES = ['Construction', 'Mining & Quarrying', 'Port Operations', 'Road Building']
 
 /* Inline SVG icons for each category filter pill */
 const CAT_ICONS: Record<string, React.ReactElement> = {
@@ -22,7 +23,7 @@ const CAT_ICONS: Record<string, React.ReactElement> = {
       <rect x="9" y="9" width="6" height="6" rx="1" />
     </svg>
   ),
-  Excavator: (
+  Excavators: (
     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 16 L2 9 L6 9" />
       <path d="M6 9 L12 4" />
@@ -30,21 +31,21 @@ const CAT_ICONS: Record<string, React.ReactElement> = {
       <path d="M2 16 L18 16" />
     </svg>
   ),
-  Bulldozer: (
+  Bulldozers: (
     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="10" width="14" height="5" rx="1" />
       <path d="M3 10 L5 6 L15 6 L17 10" />
       <path d="M1 8 L4 5 L4 10" />
     </svg>
   ),
-  'Wheel Loader': (
+  'Wheel Loaders': (
     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="5" cy="14" r="3" />
       <circle cx="14" cy="14" r="3" />
       <path d="M5 11 L8 11 L8 6 L11 4 L14 6 L14 11" />
     </svg>
   ),
-  'Motor Grader': (
+  'Motor Graders': (
     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 15 L19 15" />
       <path d="M3 10 L17 12" />
@@ -53,20 +54,13 @@ const CAT_ICONS: Record<string, React.ReactElement> = {
       <circle cx="16" cy="15" r="2" />
     </svg>
   ),
-  'Articulated Truck': (
+  'Articulated Trucks': (
     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="7" width="8" height="7" rx="1" />
       <rect x="10" y="5" width="9" height="9" rx="1" />
       <circle cx="3" cy="16" r="2" />
       <circle cx="12" cy="16" r="2" />
       <circle cx="17" cy="16" r="2" />
-    </svg>
-  ),
-  Compactor: (
-    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="10" width="16" height="6" rx="3" />
-      <path d="M5 10 L5 5 L15 5 L15 10" />
-      <path d="M8 5 L8 3 L12 3 L12 5" />
     </svg>
   ),
 }
@@ -190,8 +184,18 @@ export default async function MachinesPage({
         <div className="bg-navy-900/96 backdrop-blur-md border-b border-white/8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-2">
 
-            {/* Scrollable pills */}
-            <div className="flex-1 overflow-x-auto scrollbar-hide">
+            {/* Mobile: drawer trigger */}
+            <div className="flex md:hidden flex-1 py-2.5">
+              <MobileFilterDrawer
+                category={params.category}
+                brand={params.brand}
+                use_case={params.use_case}
+                view={params.view}
+              />
+            </div>
+
+            {/* Desktop: scrollable pills */}
+            <div className="hidden md:flex flex-1 overflow-x-auto scrollbar-hide">
               <div className="flex items-center gap-1.5 py-3 min-w-max pr-2">
 
                 {/* All */}
@@ -295,8 +299,8 @@ export default async function MachinesPage({
       {/* ── MAIN CONTENT ── */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
 
-        {/* Stats + active filter summary */}
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mb-7">
+        {/* Stats row */}
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mb-4">
           <p className="text-white text-sm">
             <span className="font-semibold">{count}</span>
             <span className="text-white/35"> machine{count !== 1 ? 's' : ''} available</span>
@@ -305,18 +309,46 @@ export default async function MachinesPage({
           <p className="text-white/35 text-sm hidden sm:block">Updated today</p>
           <span className="text-white/15 hidden sm:inline">|</span>
           <p className="text-sm text-gold-500 font-medium">✓ Ready to ship</p>
-          {hasFilters && (
-            <>
-              <span className="text-white/15">|</span>
-              <Link
-                href="/machines"
-                className="text-xs text-white/30 hover:text-white/70 transition-colors duration-150"
-              >
-                Clear filters ×
-              </Link>
-            </>
-          )}
         </div>
+
+        {/* Active filter badges */}
+        {hasFilters && (
+          <div className="flex items-center flex-wrap gap-2 mb-6">
+            {params.category && (
+              <Link
+                href={buildHref(params, { category: null })}
+                className="flex items-center gap-1.5 text-xs bg-gold-400/10 border border-gold-400/30 text-gold-300 px-2.5 py-1 rounded-full hover:bg-gold-400/20 transition-colors duration-150"
+              >
+                {params.category}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>
+              </Link>
+            )}
+            {params.brand && (
+              <Link
+                href={buildHref(params, { brand: null })}
+                className="flex items-center gap-1.5 text-xs bg-gold-400/10 border border-gold-400/30 text-gold-300 px-2.5 py-1 rounded-full hover:bg-gold-400/20 transition-colors duration-150"
+              >
+                {params.brand}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>
+              </Link>
+            )}
+            {params.use_case && (
+              <Link
+                href={buildHref(params, { use_case: null })}
+                className="flex items-center gap-1.5 text-xs bg-gold-400/10 border border-gold-400/30 text-gold-300 px-2.5 py-1 rounded-full hover:bg-gold-400/20 transition-colors duration-150"
+              >
+                {params.use_case}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 1l8 8M9 1L1 9"/></svg>
+              </Link>
+            )}
+            <Link
+              href={buildHref(params, { category: null, brand: null, use_case: null })}
+              className="text-xs text-white/30 hover:text-white/60 transition-colors duration-150 ml-1"
+            >
+              Clear all
+            </Link>
+          </div>
+        )}
 
         {/* Empty state */}
         {!machines || count === 0 ? (

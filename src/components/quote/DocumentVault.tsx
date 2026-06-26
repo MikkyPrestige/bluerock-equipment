@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Pagination from '@/components/ui/Pagination'
 import { DOC_TYPE_LABELS } from '@/lib/milestones'
 
 interface VaultDocument {
@@ -10,6 +11,13 @@ interface VaultDocument {
   file_path: string
   superseded_at: string | null
   created_at: string
+}
+
+interface Props {
+  quoteId:          string
+  initialDocuments: VaultDocument[]
+  totalCount:       number
+  pageSize:         number
 }
 
 function DownloadButton({ docId }: { docId: string }) {
@@ -47,8 +55,32 @@ function DownloadButton({ docId }: { docId: string }) {
   )
 }
 
-export default function DocumentVault({ documents }: { documents: VaultDocument[] }) {
-  if (documents.length === 0) {
+export default function DocumentVault({ quoteId, initialDocuments, totalCount, pageSize }: Props) {
+  const [documents,    setDocuments]    = useState<VaultDocument[]>(initialDocuments)
+  const [page,         setPage]         = useState(0)
+  const [pageLoading,  setPageLoading]  = useState(false)
+  const [docTotal]                      = useState(totalCount)
+
+  const totalPages = Math.max(1, Math.ceil(docTotal / pageSize))
+
+  async function fetchPage(p: number) {
+    setPageLoading(true)
+    try {
+      const res = await fetch(
+        `/api/documents?quote_id=${quoteId}&page=${p}&page_size=${pageSize}`,
+        { credentials: 'include' }
+      )
+      if (res.ok) {
+        const { documents: docs } = await res.json()
+        setDocuments(docs as VaultDocument[])
+        setPage(p)
+      }
+    } finally {
+      setPageLoading(false)
+    }
+  }
+
+  if (documents.length === 0 && docTotal === 0) {
     return <p className="text-sm text-white/25 italic">No documents available yet.</p>
   }
 
@@ -67,14 +99,13 @@ export default function DocumentVault({ documents }: { documents: VaultDocument[
   }
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-3 ${pageLoading ? 'opacity-60 pointer-events-none' : ''}`}>
       {Object.entries(grouped).map(([type, docs]) => {
         const active     = docs.filter(d => !d.superseded_at)
         const superseded = docs.filter(d => !!d.superseded_at)
 
         return (
           <div key={type} className="border border-white/8 rounded-xl overflow-hidden">
-            {/* Doc type header */}
             <div className="bg-navy-800 px-4 py-2.5 border-b border-white/8">
               <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
                 {DOC_TYPE_LABELS[type] ?? type}
@@ -121,6 +152,19 @@ export default function DocumentVault({ documents }: { documents: VaultDocument[
           </div>
         )
       })}
+
+      {docTotal > pageSize && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPrevious={() => fetchPage(page - 1)}
+          onNext={() => fetchPage(page + 1)}
+          showingFrom={page * pageSize + 1}
+          showingTo={Math.min((page + 1) * pageSize, docTotal)}
+          totalCount={docTotal}
+          label="documents"
+        />
+      )}
     </div>
   )
 }

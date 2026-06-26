@@ -10,6 +10,12 @@ import truckImg  from '@/assests/img/machinery/freight-port-crane-containers.jpg
 import compactorImg from '@/assests/img/machinery/yard-operations-aerial-storage.jpg'
 
 const CATEGORY_IMAGES: Record<string, typeof excImg> = {
+  'Excavators':        excImg,
+  'Bulldozers':        bullImg,
+  'Wheel Loaders':     loaderImg,
+  'Motor Graders':     graderImg,
+  'Articulated Trucks':truckImg,
+  /* legacy singular keys kept as fallback */
   'Excavator':        excImg,
   'Bulldozer':        bullImg,
   'Wheel Loader':     loaderImg,
@@ -18,12 +24,32 @@ const CATEGORY_IMAGES: Record<string, typeof excImg> = {
   'Compactor':        compactorImg,
 }
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+
+/** Returns the hero image src: first non-video item in media_urls, else category fallback. */
+function heroSrc(mediaUrls: string[] | null | undefined, category: string): string | typeof excImg {
+  const first = (mediaUrls ?? []).find(
+    u => u && !u.includes('youtube') && !u.includes('youtu.be')
+  )
+  if (!first) return CATEGORY_IMAGES[category] ?? excImg
+  if (first.startsWith('http')) return first
+  return `${SUPABASE_URL}/storage/v1/object/public/machine-media/${first}`
+}
+
 const STATUS_BADGE: Record<string, string> = {
   available:       'bg-emerald-500/20 border-emerald-500/30 text-emerald-400',
   pending_hold:    'bg-amber-500/20 border-amber-500/30 text-amber-400',
   reserved:        'bg-amber-500/20 border-amber-500/30 text-amber-400',
   payment_pending: 'bg-orange-500/20 border-orange-500/30 text-orange-400',
   sold:            'bg-red-500/20 border-red-500/30 text-red-400',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  available:       'Available',
+  pending_hold:    'On Hold',
+  reserved:        'Reserved',
+  payment_pending: 'Paying',
+  sold:            'Sold',
 }
 
 interface Machine {
@@ -62,9 +88,9 @@ export default function MachineCard({
   showActions?: boolean
   viewMode?: 'grid' | 'list'
 }) {
-  const categoryImg = CATEGORY_IMAGES[machine.category] ?? excImg
-  const badgeCls = STATUS_BADGE[machine.status] ?? 'bg-white/10 border-white/15 text-white/60'
-  const statusLabel = machine.status.replace(/_/g, ' ')
+  const cardImg     = heroSrc(machine.media_urls, machine.category)
+  const badgeCls    = STATUS_BADGE[machine.status] ?? 'bg-white/10 border-white/15 text-white/60'
+  const statusLabel = STATUS_LABEL[machine.status] ?? machine.status.replace(/_/g, ' ')
 
   /* ── LIST VIEW ── */
   if (viewMode === 'list') {
@@ -73,54 +99,58 @@ export default function MachineCard({
         {/* Gold accent left strip */}
         <div className="w-1 flex-shrink-0 bg-gold-400/20 group-hover:bg-gold-400/55 transition-colors duration-300" />
 
-        <div className="flex-1 px-4 py-3.5 flex items-center gap-4 flex-wrap sm:flex-nowrap min-w-0">
+        <div className="flex-1 px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-0">
 
-          {/* Machine info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] text-white/35 uppercase tracking-widest">{machine.category}</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${badgeCls}`}>
+          {/* Machine info — full-width block on mobile, flex item on desktop */}
+          <div className="min-w-0 sm:flex-1 sm:min-w-[220px]">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-[10px] text-white/35 uppercase tracking-widest truncate">{machine.category}</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase flex-shrink-0 whitespace-nowrap ${badgeCls}`}>
                 {statusLabel}
               </span>
             </div>
-            <h3 className="font-display font-bold text-white text-base truncate">
+            <h3 className="font-display font-bold text-white text-base leading-snug sm:truncate">
               {machine.brand} {machine.model}
             </h3>
-            <p className="text-white/35 text-xs mt-0.5">
+            <p className="text-white/35 text-xs mt-1.5 leading-relaxed">
               {machine.year} · 📍 {machine.yard_city}, {machine.yard_country}
             </p>
           </div>
 
-          {/* Stats */}
-          <div className="flex gap-6 flex-shrink-0">
-            <div>
-              <p className="text-white/30 text-[10px] uppercase tracking-wider mb-0.5">Hours</p>
-              <p className="text-white text-sm font-semibold">{machine.engine_hours.toLocaleString()}</p>
+          {/* Second row on mobile: stats + view link side by side */}
+          <div className="flex items-center gap-4">
+
+            {/* Stats */}
+            <div className="flex gap-5 sm:gap-6 flex-1 sm:flex-none sm:flex-shrink-0">
+              <div>
+                <p className="text-white/30 text-[10px] uppercase tracking-wider mb-0.5">Hours</p>
+                <p className="text-white text-sm font-semibold">{machine.engine_hours.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-white/30 text-[10px] uppercase tracking-wider mb-0.5">Price</p>
+                <p className="text-gold-400 text-sm font-bold">${Number(machine.price_usd).toLocaleString()}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-white/30 text-[10px] uppercase tracking-wider mb-0.5">Price</p>
-              <p className="text-gold-400 text-sm font-bold">${Number(machine.price_usd).toLocaleString()}</p>
-            </div>
+
+            {/* 150-pt badge — desktop only */}
+            <span className="text-xs text-gold-500 font-semibold flex-shrink-0 hidden sm:block">✓ 150-Point</span>
+
+            {/* Actions */}
+            {showActions && (
+              <div className="flex items-center gap-2 flex-shrink-0 sm:border-l sm:border-white/10 sm:pl-4">
+                <WatchlistButton machineId={machine.id} initialWatchlisted={isWatchlisted} />
+                <CompareToggle machineId={machine.id} initialInComparison={isInComparison} />
+              </div>
+            )}
+
+            {/* View link — ml-auto pushes it to the right edge on mobile */}
+            <Link
+              href={`/machines/${machine.id}`}
+              className="bg-navy-800 hover:bg-navy-700 border border-white/10 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors duration-150 flex-shrink-0 whitespace-nowrap ml-auto sm:ml-0"
+            >
+              View →
+            </Link>
           </div>
-
-          {/* 150-pt badge */}
-          <span className="text-xs text-gold-500 font-semibold flex-shrink-0 hidden sm:block">✓ 150-Point</span>
-
-          {/* Actions */}
-          {showActions && (
-            <div className="flex items-center gap-2 flex-shrink-0 sm:border-l sm:border-white/10 sm:pl-4">
-              <WatchlistButton machineId={machine.id} initialWatchlisted={isWatchlisted} />
-              <CompareToggle machineId={machine.id} initialInComparison={isInComparison} />
-            </div>
-          )}
-
-          {/* View link */}
-          <Link
-            href={`/machines/${machine.id}`}
-            className="bg-navy-800 hover:bg-navy-700 border border-white/10 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors duration-150 flex-shrink-0 whitespace-nowrap"
-          >
-            View →
-          </Link>
         </div>
       </div>
     )
@@ -130,10 +160,10 @@ export default function MachineCard({
   return (
     <div className="group relative h-80 rounded-xl overflow-hidden bg-navy-900 flex flex-col">
 
-      {/* Category photo background */}
+      {/* Hero image — machine's own first photo, or category fallback */}
       <Image
-        src={categoryImg}
-        alt={machine.category}
+        src={cardImg}
+        alt={`${machine.brand} ${machine.model}`}
         fill
         className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -145,18 +175,18 @@ export default function MachineCard({
       {/* Hover gold ring */}
       <div className="absolute inset-0 rounded-xl ring-inset ring-0 group-hover:ring-2 ring-gold-400/50 transition-all duration-300 pointer-events-none" />
 
-      {/* Main link — covers the full card except the actions strip */}
-      <Link href={`/machines/${machine.id}`} className="relative z-10 flex-1 flex flex-col justify-between p-4">
+      {/* Category badge — top left */}
+      <span className="absolute top-4 left-4 z-20 text-[10px] text-white/55 bg-navy-950/65 backdrop-blur-sm border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-wider pointer-events-none">
+        {machine.category}
+      </span>
 
-        {/* Top row: category + status badges */}
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-[10px] text-white/55 bg-navy-950/65 backdrop-blur-sm border border-white/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
-            {machine.category}
-          </span>
-          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase backdrop-blur-sm ${badgeCls}`}>
-            {statusLabel}
-          </span>
-        </div>
+      {/* Status badge — top right */}
+      <span className={`absolute top-4 right-4 z-20 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase backdrop-blur-sm pointer-events-none ${badgeCls}`}>
+        {statusLabel}
+      </span>
+
+      {/* Main link — covers the full card except the actions strip */}
+      <Link href={`/machines/${machine.id}`} className="relative z-10 flex-1 flex flex-col justify-end p-4">
 
         {/* Bottom info block */}
         <div>

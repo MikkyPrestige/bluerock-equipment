@@ -7,23 +7,29 @@ import SignOutButton      from '@/app/dashboard/signout-button'
 import WatchlistClient, { type WatchlistEntry } from '@/components/dashboard/WatchlistClient'
 import logo from '@/assests/img/logo.jpg'
 
+const PAGE_SIZE = 12
+
 export default async function WatchlistPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const [{ data: buyer }, { data: raw }] = await Promise.all([
+  const [{ data: buyer }, { data: raw, count: totalCount }] = await Promise.all([
     supabase.from('buyers').select('company_name, tier').eq('id', user.id).single(),
     adminSupabase
       .from('watchlist')
-      .select('machine_id, in_comparison, arrival_alert_params, created_at, machines(id, name, brand, model, year, category, price_usd, engine_hours, status, yard_city, yard_country)')
+      .select(
+        'machine_id, in_comparison, arrival_alert_params, created_at, machines(id, name, brand, model, year, category, price_usd, engine_hours, status, yard_city, yard_country)',
+        { count: 'exact' }
+      )
       .eq('buyer_id', user.id)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(0, PAGE_SIZE - 1),
   ])
 
-  const entries = (raw ?? []) as unknown as WatchlistEntry[]
-  const count   = entries.length
-  const isAdmin = user.email === process.env.ADMIN_EMAIL
+  const initialEntries = (raw ?? []) as unknown as WatchlistEntry[]
+  const total          = totalCount ?? 0
+  const isAdmin        = user.email === process.env.ADMIN_EMAIL
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -67,9 +73,9 @@ export default async function WatchlistPage() {
             </div>
             <div className="flex items-center gap-3">
               <h1 className="font-display text-2xl sm:text-3xl font-bold text-white">My Watchlist</h1>
-              {count > 0 && (
+              {total > 0 && (
                 <span className="text-sm font-bold px-3 py-1 rounded-full bg-gold-400/15 border border-gold-400/30 text-gold-400">
-                  {count}
+                  {total}
                 </span>
               )}
             </div>
@@ -82,7 +88,7 @@ export default async function WatchlistPage() {
 
       {/* ── MAIN ── */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8">
-        <WatchlistClient entries={entries} />
+        <WatchlistClient initialEntries={initialEntries} totalCount={total} />
       </main>
 
       {/* ── FOOTER ── */}

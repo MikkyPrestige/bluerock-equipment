@@ -37,12 +37,21 @@ export default async function BuyerQuoteDetailPage({
 
   if (error || !quote) notFound()
 
-  const { data: documents } = await adminSupabase
-    .from('documents')
-    .select('id, document_type, version, file_path, superseded_at, created_at')
-    .eq('quote_id', id)
-    .order('document_type')
-    .order('version', { ascending: false })
+  const DOC_PAGE_SIZE = 10
+
+  const [{ data: documents }, { count: totalDocCount }] = await Promise.all([
+    adminSupabase
+      .from('documents')
+      .select('id, document_type, version, file_path, superseded_at, created_at')
+      .eq('quote_id', id)
+      .order('document_type')
+      .order('version', { ascending: false })
+      .range(0, DOC_PAGE_SIZE - 1),
+    adminSupabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('quote_id', id),
+  ])
 
   const m = quote.machines as {
     name: string; brand: string; model: string; year: number
@@ -168,7 +177,12 @@ export default async function BuyerQuoteDetailPage({
           <p className="text-[11px] text-white/25 mb-4 leading-relaxed">
             Download links expire after 1 hour for security. Regenerate if needed.
           </p>
-          <DocumentVault documents={documents ?? []} />
+          <DocumentVault
+            quoteId={id}
+            initialDocuments={documents ?? []}
+            totalCount={totalDocCount ?? 0}
+            pageSize={DOC_PAGE_SIZE}
+          />
         </div>
 
       </main>

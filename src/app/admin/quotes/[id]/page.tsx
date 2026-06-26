@@ -289,7 +289,12 @@ export default async function AdminQuoteDetailPage({
               </span>
             )}
           </div>
-          <DocumentVault documents={documents ?? []} />
+          <DocumentVault
+            quoteId={id}
+            initialDocuments={documents ?? []}
+            totalCount={documents?.length ?? 0}
+            pageSize={100}
+          />
         </Section>
 
         {/* ── UPLOAD TRADE DOCUMENT ── */}

@@ -17,6 +17,8 @@ import graderImg           from '@/assests/img/machinery/machine-card-motor-grad
 import truckImg            from '@/assests/img/machinery/freight-port-crane-containers.jpg'
 import compactorImg        from '@/assests/img/machinery/yard-operations-aerial-storage.jpg'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+
 /* ── Category → hero fallback image ── */
 const CATEGORY_IMAGES: Record<string, typeof excImg> = {
   'Excavator':         excImg,
@@ -25,9 +27,22 @@ const CATEGORY_IMAGES: Record<string, typeof excImg> = {
   'Motor Grader':      graderImg,
   'Articulated Truck': truckImg,
   'Compactor':         compactorImg,
+  /* plural keys for consistency with MachineCard */
+  'Excavators':        excImg,
+  'Bulldozers':        bullImg,
+  'Wheel Loaders':     loaderImg,
+  'Motor Graders':     graderImg,
+  'Articulated Trucks':truckImg,
 }
-function categoryImg(cat: string) {
-  return CATEGORY_IMAGES[cat] ?? excImg
+
+/** Returns the hero src: first non-video item in media_urls, else category fallback. */
+function heroSrc(mediaUrls: string[] | null | undefined, category: string): string | typeof excImg {
+  const first = (mediaUrls ?? []).find(
+    u => u && !u.includes('youtube') && !u.includes('youtu.be')
+  )
+  if (!first) return CATEGORY_IMAGES[category] ?? excImg
+  if (first.startsWith('http')) return first
+  return `${SUPABASE_URL}/storage/v1/object/public/machine-media/${first}`
 }
 
 /* ── Color maps (dark-adapted) ── */
@@ -101,7 +116,7 @@ export default async function MachineDetailPage({
   const mediaUrls = (m.media_urls || []).filter((u: string) => !u.includes('youtube') && !u.includes('youtu.be'))
   const statusBadge = STATUS_BADGE[m.status] ?? 'bg-white/10 border-white/15 text-white/60'
   const statusLabel = m.status.replace(/_/g, ' ')
-  const heroImg = categoryImg(m.category)
+  const heroImg = heroSrc(m.media_urls, m.category)
 
   /* Quick specs — always show engine hours + location; show optional fields if present */
   const quickSpecs = [

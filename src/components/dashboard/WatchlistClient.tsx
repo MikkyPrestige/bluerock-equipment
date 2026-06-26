@@ -1,17 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import WatchlistExportButtons from './WatchlistExportButtons'
 import MultiMachineQuoteModal from '@/components/MultiMachineQuoteModal'
+import Pagination from '@/components/ui/Pagination'
+import { createClient } from '@/lib/supabase/client'
 import excImg       from '@/assests/img/machinery/machine-card-excavator-openpit.jpg'
 import bullImg      from '@/assests/img/machinery/machine-card-bulldozer-field.jpg'
 import loaderImg    from '@/assests/img/machinery/machine-card-wheel-loader-gravel.jpg'
 import graderImg    from '@/assests/img/machinery/machine-card-motor-grader-road.jpg'
 import truckImg     from '@/assests/img/machinery/freight-port-crane-containers.jpg'
 import compactorImg from '@/assests/img/machinery/yard-operations-aerial-storage.jpg'
+
+const PAGE_SIZE = 12
 
 const CATEGORY_IMAGES: Record<string, typeof excImg> = {
   'Excavator':         excImg,
@@ -52,22 +55,55 @@ export type WatchlistEntry = {
   } | null
 }
 
-export default function WatchlistClient({ entries }: { entries: WatchlistEntry[] }) {
-  const router = useRouter()
+interface Props {
+  initialEntries: WatchlistEntry[]
+  totalCount:     number
+}
 
-  const [removed,  setRemoved]  = useState<Set<string>>(new Set())
-  const [removing, setRemoving] = useState<Set<string>>(new Set())
-  const [checked,  setChecked]  = useState<Set<string>>(new Set())
-  const [alertOn,  setAlertOn]  = useState<Set<string>>(
-    new Set(entries.filter(e => e.arrival_alert_params?.enabled).map(e => e.machine_id))
+const supabase = createClient()
+
+export default function WatchlistClient({ initialEntries, totalCount }: Props) {
+  /* ── Row & page state ── */
+  const [rows,        setRows]        = useState<WatchlistEntry[]>(initialEntries)
+  const [page,        setPage]        = useState(0)
+  const [pageLoading, setPageLoading] = useState(false)
+  const [visibleTotal, setVisibleTotal] = useState(totalCount)
+
+  /* ── Interaction state ── */
+  const [removed,   setRemoved]   = useState<Set<string>>(new Set())
+  const [removing,  setRemoving]  = useState<Set<string>>(new Set())
+  const [alertOn,   setAlertOn]   = useState<Set<string>>(
+    new Set(initialEntries.filter(e => e.arrival_alert_params?.enabled).map(e => e.machine_id))
   )
-  const [alertBusy, setAlertBusy] = useState<Set<string>>(new Set())
-  const [quoteState, setQuoteState] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
+  const [alertBusy,   setAlertBusy]   = useState<Set<string>>(new Set())
+  const [checked,     setChecked]     = useState<Set<string>>(new Set())
+  const [quoteState,  setQuoteState]  = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
   const [quotedCount, setQuotedCount] = useState(0)
 
-  const visible  = entries.filter(e => !removed.has(e.machine_id))
+  const totalPages = Math.max(1, Math.ceil(visibleTotal / PAGE_SIZE))
+
+  /* ── Page fetcher ── */
+  async function fetchPage(p: number) {
+    setPageLoading(true)
+    try {
+      const { data } = await supabase
+        .from('watchlist')
+        .select('machine_id, in_comparison, arrival_alert_params, created_at, machines(id, name, brand, model, year, category, price_usd, engine_hours, status, yard_city, yard_country)')
+        .order('created_at', { ascending: false })
+        .range(p * PAGE_SIZE, (p + 1) * PAGE_SIZE - 1)
+      if (data) {
+        setRows(data as unknown as WatchlistEntry[])
+        setPage(p)
+        setRemoved(new Set())
+        setChecked(new Set())
+      }
+    } finally {
+      setPageLoading(false)
+    }
+  }
+
+  const visible   = rows.filter(e => !removed.has(e.machine_id))
   const available = visible.filter(e => e.machines?.status === 'available')
-  const canRequestAll = available.length > 0
 
   function toggleCheck(id: string) {
     setChecked(prev => {
@@ -78,8 +114,7 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
   }
 
   function selectAllAvailable() {
-    const ids = available.map(e => e.machine_id)
-    setChecked(new Set(ids))
+    setChecked(new Set(available.map(e => e.machine_id)))
   }
 
   async function handleRemove(machineId: string) {
@@ -94,6 +129,7 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
       if (res.ok) {
         setRemoved(prev => new Set(prev).add(machineId))
         setChecked(prev => { const n = new Set(prev); n.delete(machineId); return n })
+        setVisibleTotal(prev => Math.max(0, prev - 1))
       }
     } finally {
       setRemoving(prev => { const n = new Set(prev); n.delete(machineId); return n })
@@ -148,7 +184,7 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
   }
 
   /* ── Empty state ── */
-  if (visible.length === 0) {
+  if (visible.length === 0 && visibleTotal === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-5">
@@ -170,13 +206,15 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
 
   const selectedIds = [...checked].filter(id => !removed.has(id))
   const hasChecked  = selectedIds.length > 0
+  const canRequestAll = available.length > 0
 
   return (
     <>
       {/* ── TOP ACTION BAR ── */}
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
-          <WatchlistExportButtons count={visible.length} />
+          {/* Export always uses total count (all saved machines, not just current page) */}
+          <WatchlistExportButtons count={visibleTotal} />
           {canRequestAll && (
             <button
               onClick={selectAllAvailable}
@@ -188,12 +226,12 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
           )}
         </div>
         <p className="text-xs text-white/25">
-          {visible.length} machine{visible.length !== 1 ? 's' : ''} saved
+          {visibleTotal} machine{visibleTotal !== 1 ? 's' : ''} saved
         </p>
       </div>
 
       {/* ── MACHINE LIST ── */}
-      <div className="flex flex-col gap-3 pb-28">
+      <div className={`flex flex-col gap-3 ${pageLoading ? 'opacity-60 pointer-events-none' : ''}`}>
         {visible.map(entry => {
           const m = entry.machines
           if (!m) return null
@@ -280,16 +318,10 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
                         onClick={() => handleAlertToggle(id, m.category)}
                         disabled={alertLoading}
                         className={`text-xs font-semibold transition-colors duration-150 ${
-                          alertActive
-                            ? 'text-gold-400'
-                            : 'text-white/35 hover:text-white/65'
+                          alertActive ? 'text-gold-400' : 'text-white/35 hover:text-white/65'
                         } disabled:opacity-40`}
                       >
-                        {alertLoading
-                          ? '…'
-                          : alertActive
-                            ? '🔔 Alert on'
-                            : '🔕 Notify me when similar arrives'}
+                        {alertLoading ? '…' : alertActive ? '🔔 Alert on' : '🔕 Notify me when similar arrives'}
                       </button>
                     )}
                     <button
@@ -306,6 +338,22 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
           )
         })}
       </div>
+
+      {/* ── PAGINATION ── */}
+      {visibleTotal > PAGE_SIZE && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPrevious={() => fetchPage(page - 1)}
+            onNext={() => fetchPage(page + 1)}
+            showingFrom={page * PAGE_SIZE + 1}
+            showingTo={Math.min((page + 1) * PAGE_SIZE, visibleTotal)}
+            totalCount={visibleTotal}
+            label="saved machines"
+          />
+        </div>
+      )}
 
       {/* ── STICKY SELECTION BAR ── */}
       <div
@@ -343,7 +391,7 @@ export default function WatchlistClient({ entries }: { entries: WatchlistEntry[]
         <MultiMachineQuoteModal
           state={quoteState}
           count={quotedCount}
-          onClose={() => { setQuoteState('idle'); router.refresh() }}
+          onClose={() => setQuoteState('idle')}
         />
       )}
     </>
