@@ -97,14 +97,14 @@ export default function OnboardingPage() {
             <div className="w-8 h-0.5 bg-gold-400 mt-5 mb-5" />
 
             <p className="text-[10px] font-bold text-gold-500 uppercase tracking-widest mb-3">
-              Step 2 of 2
+              Optional · Complete Anytime
             </p>
 
             <h1 className="font-display text-2xl font-bold text-navy-900 text-center leading-tight">
-              Complete your buyer profile
+              Set up your buyer profile
             </h1>
             <p className="text-slate-500 text-sm mt-2.5 text-center leading-relaxed max-w-sm">
-              Required to request delivery quotes. Collected once and pre-filled on all future requests.
+              Completing this unlocks quote requests and trade documentation. Pre-filled on all future requests.
             </p>
           </div>
 
@@ -182,6 +182,15 @@ export default function OnboardingPage() {
             <p className="text-center text-xs text-slate-400 pt-1">
               Your information is stored securely and only used for trade documentation.
             </p>
+
+            <div className="text-center pt-1">
+              <Link
+                href="/dashboard"
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-150 underline underline-offset-2"
+              >
+                Skip for now — I&apos;ll complete this later
+              </Link>
+            </div>
 
           </form>
         </div>

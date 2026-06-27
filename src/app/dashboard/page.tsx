@@ -172,18 +172,34 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        {/* ── KYC BANNER ── */}
-        {!buyer?.kyc_verified && (
+        {/* ── PROFILE INCOMPLETE BANNER (skipped onboarding) ── */}
+        {!buyer?.company_name && (
+          <div className="flex items-center justify-between gap-4 bg-gold-400/8 border border-gold-400/20 rounded-2xl px-5 py-4 flex-wrap">
+            <div>
+              <p className="text-gold-400 font-semibold text-sm">Complete Your Buyer Profile</p>
+              <p className="text-white/35 text-xs mt-0.5">Takes 2 minutes — unlocks quote requests, freight estimates, and trade documents.</p>
+            </div>
+            <Link
+              href="/auth/onboarding"
+              className="bg-gold-400/15 border border-gold-400/30 text-gold-400 hover:bg-gold-400/25 text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            >
+              Complete Profile →
+            </Link>
+          </div>
+        )}
+
+        {/* ── KYC PENDING BANNER (profile submitted, awaiting admin verification) ── */}
+        {buyer?.company_name && !buyer?.kyc_verified && (
           <div className="flex items-center justify-between gap-4 bg-amber-500/8 border border-amber-500/20 rounded-2xl px-5 py-4 flex-wrap">
             <div>
-              <p className="text-amber-400 font-semibold text-sm">Complete Your KYC Verification</p>
-              <p className="text-white/35 text-xs mt-0.5">Required to access quotes and export documentation.</p>
+              <p className="text-amber-400 font-semibold text-sm">KYC Verification Pending</p>
+              <p className="text-white/35 text-xs mt-0.5">Your profile is under review. We&apos;ll notify you once verified.</p>
             </div>
             <Link
               href="/auth/onboarding"
               className="bg-amber-500/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/30 text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
             >
-              Complete KYC →
+              Edit Details →
             </Link>
           </div>
         )}

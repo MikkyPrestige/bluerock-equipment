@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -81,6 +81,11 @@ export default function EditMachinePage() {
     Object.fromEntries(WEAR_COMPONENTS.map(c => [c, 'good']))
   )
   const [categorySpecs, setCategorySpecs] = useState<Record<string, string>>({})
+  const [mediaUrls,     setMediaUrls]     = useState<string[]>([])
+  const [uploading,     setUploading]     = useState(false)
+  const [uploadCount,   setUploadCount]   = useState(0)
+  const [uploadError,   setUploadError]   = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Load existing machine data ── */
   useEffect(() => {
@@ -112,6 +117,9 @@ export default function EditMachinePage() {
         if (m.specs && typeof m.specs === 'object') {
           setCategorySpecs(m.specs as Record<string, string>)
         }
+        if (Array.isArray(m.media_urls)) {
+          setMediaUrls(m.media_urls)
+        }
         setLoadState('ready')
       })
       .catch(() => setLoadState('error'))
@@ -121,6 +129,55 @@ export default function EditMachinePage() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  /* ── Photo management ── */
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    setUploading(true)
+    setUploadError('')
+    setUploadCount(files.length)
+    const newUrls: string[] = []
+    for (const file of Array.from(files)) {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch(`/api/admin/machines/${id}/photos`, {
+        method: 'POST',
+        body: fd,
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (!res.ok) { setUploadError(data.error ?? 'Upload failed'); break }
+      newUrls.push(data.url)
+    }
+    setMediaUrls(prev => [...prev, ...newUrls])
+    setUploading(false)
+    setUploadCount(0)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function movePhoto(index: number, dir: 'earlier' | 'later') {
+    setMediaUrls(prev => {
+      const next = [...prev]
+      const swap = dir === 'earlier' ? index - 1 : index + 1
+      if (swap < 0 || swap >= next.length) return prev
+      ;[next[index], next[swap]] = [next[swap], next[index]]
+      return next
+    })
+  }
+
+  function deletePhoto(url: string) {
+    setMediaUrls(prev => prev.filter(u => u !== url))
+    const path = url.split('/object/public/machine-media/')[1]
+    if (path) {
+      fetch(`/api/admin/machines/${id}/photos`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+        credentials: 'include',
+      })
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -128,7 +185,7 @@ export default function EditMachinePage() {
     const res = await fetch(`/api/admin/machines/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, wear_analysis: wearAnalysis, specs: categorySpecs }),
+      body: JSON.stringify({ ...form, wear_analysis: wearAnalysis, specs: categorySpecs, media_urls: mediaUrls }),
       credentials: 'include',
     })
     const data = await res.json()
@@ -369,6 +426,100 @@ export default function EditMachinePage() {
             </div>
           </Section>
 
+          {/* ── MACHINE PHOTOS ── */}
+          <Section title="Machine Photos">
+            {mediaUrls.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {mediaUrls.map((url, i) => (
+                  <div key={url} className="rounded-xl overflow-hidden bg-navy-800 border border-white/8">
+                    <div className="relative aspect-video">
+                      <Image
+                        src={url}
+                        alt={`Photo ${i + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                      />
+                      <span className="absolute top-2 left-2 bg-navy-950/85 backdrop-blur-sm rounded-md px-2 py-0.5 text-[10px] font-bold text-white/70">
+                        {i === 0 ? 'Hero' : `#${i + 1}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-2 border-t border-white/6">
+                      <button
+                        type="button"
+                        onClick={() => movePhoto(i, 'earlier')}
+                        disabled={i === 0}
+                        title="Move earlier"
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 text-white/40 hover:border-white/30 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-150"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deletePhoto(url)}
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-red-500/20 text-red-400/70 hover:border-red-500/50 hover:text-red-400 transition-all duration-150"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePhoto(i, 'later')}
+                        disabled={i === mediaUrls.length - 1}
+                        title="Move later"
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 text-white/40 hover:border-white/30 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-150"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload drop zone */}
+            <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-8 cursor-pointer transition-colors duration-150 ${
+              uploading ? 'border-gold-400/30 cursor-wait' : 'border-white/15 hover:border-gold-400/40'
+            }`}>
+              {uploading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-gold-400/30 border-t-gold-400 rounded-full animate-spin" />
+                  <p className="text-sm font-medium text-white/50">
+                    Uploading {uploadCount} {uploadCount === 1 ? 'photo' : 'photos'}…
+                  </p>
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 text-white/25" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-white/50">Upload Photos</p>
+                    <p className="text-xs text-white/25 mt-0.5">JPG, PNG, WebP — multiple allowed</p>
+                  </div>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePhotoUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+
+            {uploadError && (
+              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+                {uploadError}
+              </p>
+            )}
+
+            <p className="text-[11px] text-white/20">
+              First photo is the hero image on the listing card. Use ← → to reorder.
+            </p>
+          </Section>
+
           {/* ── ERROR ── */}
           {saveError && (
             <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-xl">
@@ -380,7 +531,7 @@ export default function EditMachinePage() {
           <div className="flex items-center gap-4 pt-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || uploading}
               className="bg-gold-400 hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed text-navy-950 font-bold px-8 py-3 rounded-xl text-sm transition-colors duration-150 shadow-lg shadow-black/20"
             >
               {saving ? 'Saving…' : 'Save Changes'}

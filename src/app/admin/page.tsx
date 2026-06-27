@@ -58,22 +58,36 @@ const STATUS: Record<string, { label: string; badge: string }> = {
   cancelled:         { label: 'Cancelled',         badge: 'bg-white/8 border-white/12 text-white/30' },
 }
 
-export default async function AdminDashboardPage() {
+const PAGE_SIZE = 10
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const params = await searchParams
+  const page = Math.max(1, parseInt(params.page ?? '1', 10))
+  const offset = (page - 1) * PAGE_SIZE
+
   const [
     { count: machineCount },
     { count: quoteCount },
     { count: buyerCount },
+    { count: totalQuotes },
     { data: recentQuotes },
   ] = await Promise.all([
     adminSupabase.from('machines').select('*', { count: 'exact', head: true }).neq('status', 'sold'),
     adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote'),
     adminSupabase.from('buyers').select('*', { count: 'exact', head: true }),
+    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }),
     adminSupabase
       .from('quotes')
       .select('id, status, created_at, machines(name, brand, model), buyers(company_name, email)')
       .order('created_at', { ascending: false })
-      .limit(8),
+      .range(offset, offset + PAGE_SIZE - 1),
   ])
+
+  const totalPages = Math.max(1, Math.ceil((totalQuotes ?? 0) / PAGE_SIZE))
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -236,6 +250,40 @@ export default async function AdminDashboardPage() {
                 </table>
               </div>
             </div>
+
+            {/* ── PAGINATION ── */}
+            {(totalQuotes ?? 0) >= 5 && (
+              <div className="flex items-center justify-between px-5 py-4 border-t border-white/8">
+                <Link
+                  href={`/admin?page=${page - 1}`}
+                  aria-disabled={page <= 1}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                    page <= 1
+                      ? 'border-white/6 text-white/15 pointer-events-none'
+                      : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  ← Previous
+                </Link>
+
+                <p className="text-xs text-white/30 tabular-nums">
+                  Page <span className="text-white/55 font-semibold">{page}</span> of{' '}
+                  <span className="text-white/55 font-semibold">{totalPages}</span>
+                </p>
+
+                <Link
+                  href={`/admin?page=${page + 1}`}
+                  aria-disabled={page >= totalPages}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                    page >= totalPages
+                      ? 'border-white/6 text-white/15 pointer-events-none'
+                      : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  Next →
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

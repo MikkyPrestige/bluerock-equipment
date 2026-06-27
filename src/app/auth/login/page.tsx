@@ -42,7 +42,16 @@ export default function LoginPage() {
 
       {/* Form card */}
       <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl shadow-black/50 px-8 py-10 sm:px-10 sm:py-12">
+        <div className="relative bg-white rounded-2xl shadow-2xl shadow-black/50 px-8 py-10 sm:px-10 sm:py-12">
+
+          {/* Close / back to homepage */}
+          <Link
+            href="/"
+            aria-label="Back to homepage"
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-navy-900 hover:bg-slate-100 rounded-full transition-all duration-150 text-sm font-bold"
+          >
+            ✕
+          </Link>
 
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">

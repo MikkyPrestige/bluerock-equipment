@@ -56,7 +56,16 @@ export default function SignupPage() {
 
       {/* Form card */}
       <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl shadow-black/50 px-8 py-10 sm:px-10 sm:py-12">
+        <div className="relative bg-white rounded-2xl shadow-2xl shadow-black/50 px-8 py-10 sm:px-10 sm:py-12">
+
+          {/* Close / back to homepage */}
+          <Link
+            href="/"
+            aria-label="Back to homepage"
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-navy-900 hover:bg-slate-100 rounded-full transition-all duration-150 text-sm font-bold"
+          >
+            ✕
+          </Link>
 
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
@@ -80,7 +89,7 @@ export default function SignupPage() {
           <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-6">
             <span className="text-gold-500 text-sm flex-shrink-0">◈</span>
             <p className="text-slate-600 text-xs leading-relaxed">
-              KYC verification required after registration.
+              You can browse inventory immediately. Complete your buyer profile whenever you&apos;re ready to request quotes.
             </p>
           </div>
 
@@ -132,9 +141,9 @@ export default function SignupPage() {
             </button>
           </form>
 
-          {/* KYC next-step note */}
+          {/* Next-step note */}
           <p className="text-[11px] text-slate-400 text-center mt-5 leading-relaxed">
-            Next: you&apos;ll complete a short KYC form with your company details.
+            Next: optionally complete your buyer profile to unlock quote requests, or skip and browse first.
           </p>
 
           <div className="border-t border-slate-100 mt-5 pt-5">

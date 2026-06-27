@@ -66,6 +66,7 @@ interface Machine {
   use_case: string; engine_hours: number; price_usd: number
   yard_city: string; yard_country: string; status: string
   wear_analysis: Record<string, string>; media_urls: string[]
+  specs?: Record<string, string>
   description?: string; serial_number?: string; operating_weight_kg?: number
   engine_configuration?: string; hours_since_service?: number
   video_url?: string; inspection_report_url?: string
@@ -118,15 +119,16 @@ export default async function MachineDetailPage({
   const statusLabel = m.status.replace(/_/g, ' ')
   const heroImg = heroSrc(m.media_urls, m.category)
 
-  /* Quick specs — always show engine hours + location; show optional fields if present */
   const quickSpecs = [
-    { label: 'Engine Hours',       value: `${m.engine_hours.toLocaleString()} hrs` },
-    { label: 'Yard Location',      value: `${m.yard_city}, ${m.yard_country}` },
-    ...(m.operating_weight_kg ? [{ label: 'Operating Weight', value: `${Number(m.operating_weight_kg).toLocaleString()} kg` }] : []),
-    ...(m.engine_configuration    ? [{ label: 'Engine Config',    value: m.engine_configuration }] : []),
-    ...(m.hours_since_service     ? [{ label: 'Hrs Since Service', value: `${m.hours_since_service.toLocaleString()} hrs` }] : []),
-    ...(m.serial_number           ? [{ label: 'Serial Number',    value: m.serial_number }] : []),
+    { label: 'Year',          value: String(m.year) },
+    { label: 'Engine Hours',  value: `${m.engine_hours.toLocaleString()} hrs` },
+    { label: 'Yard Location', value: `${m.yard_city}, ${m.yard_country}` },
+    { label: 'Use Case',      value: m.use_case },
   ]
+
+  const categorySpecs = m.specs && typeof m.specs === 'object'
+    ? Object.entries(m.specs).filter(([, v]) => v && String(v).trim() !== '')
+    : []
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -348,6 +350,54 @@ export default async function MachineDetailPage({
                 ))}
               </div>
             </div>
+
+            {/* Technical Details — always shown; nulls display as "—" */}
+            <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+              <p className="text-xs text-white/35 font-semibold uppercase tracking-widest mb-4">Technical Details</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-navy-950/50 border border-white/6 rounded-xl px-4 py-3.5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Engine Configuration</p>
+                  <p className="text-white font-semibold text-sm leading-tight">
+                    {m.engine_configuration ?? '—'}
+                  </p>
+                </div>
+                <div className="bg-navy-950/50 border border-white/6 rounded-xl px-4 py-3.5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Hours Since Service</p>
+                  <p className="text-white font-semibold text-sm leading-tight">
+                    {m.hours_since_service ? `${Number(m.hours_since_service).toLocaleString()} hrs` : '—'}
+                  </p>
+                </div>
+                <div className="bg-navy-950/50 border border-white/6 rounded-xl px-4 py-3.5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Operating Weight</p>
+                  <p className="text-white font-semibold text-sm leading-tight">
+                    {m.operating_weight_kg ? `${Number(m.operating_weight_kg).toLocaleString()} kg` : '—'}
+                  </p>
+                </div>
+                <div className="bg-navy-950/50 border border-white/6 rounded-xl px-4 py-3.5">
+                  <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">Serial Number</p>
+                  <p className="text-white font-semibold text-sm leading-tight font-mono tracking-wide">
+                    {m.serial_number ?? '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Category-specific specs (Bucket Capacity, Blade Width, etc.) */}
+            {categorySpecs.length > 0 && (
+              <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+                <p className="text-xs text-white/35 font-semibold uppercase tracking-widest mb-4">
+                  {m.category} Specifications
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {categorySpecs.map(([key, value]) => (
+                    <div key={key} className="bg-navy-950/50 border border-white/6 rounded-xl px-4 py-3.5">
+                      <p className="text-white/35 text-[10px] uppercase tracking-wider mb-1">{key}</p>
+                      <p className="text-white font-semibold text-sm leading-tight">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             {m.description && (

@@ -61,6 +61,7 @@ export async function PATCH(
   if ('engine_configuration' in body) updates.engine_configuration = body.engine_configuration || null
   if ('hours_since_service' in body) updates.hours_since_service = body.hours_since_service ? parseInt(body.hours_since_service) : null
   if ('specs'               in body) updates.specs               = body.specs || {}
+  if ('media_urls'          in body) updates.media_urls          = Array.isArray(body.media_urls) ? body.media_urls : []
 
   const { data, error } = await adminSupabase
     .from('machines')
