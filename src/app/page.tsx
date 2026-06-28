@@ -105,6 +105,7 @@ export default async function HomePage() {
           className="object-cover object-center"
           priority
           quality={90}
+          sizes="100vw"
         />
         {/* Layered dark overlays for text legibility + mood */}
         <div className="absolute inset-0 bg-gradient-to-b from-navy-950/80 via-navy-950/25 to-navy-950/90" />
@@ -191,6 +192,7 @@ export default async function HomePage() {
                   alt={cat.name}
                   fill
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
                 {/* Base gradient — content legibility */}
                 <div className="absolute inset-0 bg-gradient-to-t from-navy-950/90 via-navy-950/35 to-navy-950/10" />
@@ -280,6 +282,7 @@ export default async function HomePage() {
           fill
           className="object-cover object-center"
           quality={85}
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-navy-950/80" />
 

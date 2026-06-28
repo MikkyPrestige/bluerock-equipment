@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
+import AdminMobileNav from '@/components/AdminMobileNav'
 
 /* ── Constants ── */
 const CATEGORIES      = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
@@ -246,9 +247,12 @@ export default function EditMachinePage() {
             <span className="text-white/55">Edit Machine</span>
           </div>
         </div>
-        <Link href="/admin/inventory" className="text-sm text-white/35 hover:text-white transition-colors duration-150">
-          ← Cancel
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/admin/inventory" className="text-sm text-white/35 hover:text-white transition-colors duration-150">
+            ← Cancel
+          </Link>
+          <AdminMobileNav />
+        </div>
       </header>
 
       {/* ── TITLE BAR ── */}

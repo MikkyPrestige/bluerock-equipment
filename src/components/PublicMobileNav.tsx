@@ -6,16 +6,16 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-interface MobileNavProps {
+interface Props {
   isLoggedIn: boolean
   isAdmin: boolean
 }
 
-export default function MobileNav({ isLoggedIn, isAdmin }: MobileNavProps) {
+export default function PublicMobileNav({ isLoggedIn, isAdmin }: Props) {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const supabase = createClient()
-  const router   = useRouter()
+  const router = useRouter()
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -121,7 +121,7 @@ export default function MobileNav({ isLoggedIn, isAdmin }: MobileNavProps) {
           )}
         </nav>
 
-        {/* Footer: Sign Out / Sign In */}
+        {/* Footer */}
         <div className="px-3 py-4 border-t border-white/8">
           {isLoggedIn ? (
             <button
@@ -156,7 +156,6 @@ export default function MobileNav({ isLoggedIn, isAdmin }: MobileNavProps) {
 
   return (
     <>
-      {/* Hamburger — mobile only */}
       <button
         onClick={() => setOpen(true)}
         className="sm:hidden flex flex-col justify-center items-center w-9 h-9 gap-[5px] rounded-lg hover:bg-white/10 transition-colors duration-150"

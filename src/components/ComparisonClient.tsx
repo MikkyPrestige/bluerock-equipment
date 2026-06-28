@@ -270,7 +270,7 @@ export default function ComparisonClient({ machines, alreadySaved }: Props) {
                   >
                     {/* Photo header */}
                     <div className="relative h-36 overflow-hidden">
-                      <Image src={categoryImg(m.category)} alt={String(m.category ?? '')} fill className="object-cover" />
+                      <Image src={categoryImg(m.category)} alt={String(m.category ?? '')} fill className="object-cover" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
                       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-navy-950/40 to-navy-950/95" />
 
                       {/* Checkbox overlay */}
@@ -382,6 +382,7 @@ export default function ComparisonClient({ machines, alreadySaved }: Props) {
                               alt={String(m.category ?? '')}
                               fill
                               className="object-cover transition-transform duration-500 group-hover:scale-105"
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                             />
                             <div className="absolute inset-0 bg-navy-950/40" />
                           </div>

@@ -149,7 +149,7 @@ function Row({ rate, index, onSaved }: { rate: FreightRate; index: number; onSav
   )
 }
 
-export default function FreightRatesTable({ rates }: { rates: FreightRate[] }) {
+export default function FreightRatesTable({ rates, totalCount }: { rates: FreightRate[], totalCount?: number }) {
   const router = useRouter()
   const [refreshState, setRefreshState] = useState<'idle' | 'refreshing' | 'done' | 'error'>('idle')
 
@@ -174,7 +174,7 @@ export default function FreightRatesTable({ rates }: { rates: FreightRate[] }) {
       {/* Stats / controls bar */}
       <div className="flex items-center justify-between gap-4">
         <p className="text-xs text-white/40">
-          {rates.length} destination{rates.length !== 1 ? 's' : ''}
+          {totalCount ?? rates.length} destination{(totalCount ?? rates.length) !== 1 ? 's' : ''}
         </p>
         <div className="flex items-center gap-3">
           {refreshState === 'done' && (

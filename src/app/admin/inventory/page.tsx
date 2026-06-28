@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import GenerateReportButton from '@/components/admin/GenerateReportButton'
+import AdminMobileNav from '@/components/AdminMobileNav'
 import logo from '@/assests/img/logo.jpg'
 
 /* ── Status badge (dark-adapted) ── */
@@ -21,22 +22,43 @@ const TABS = [
   { label: 'Inventory',    href: '/admin/inventory' },
   { label: 'Quotes',       href: '/admin/quotes' },
   { label: 'Buyers',       href: '/admin/buyers' },
+  { label: 'Waitlist',     href: '/admin/waitlist' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
 ]
 
-export default async function AdminInventoryPage() {
-  const supabase = await createClient()
-  const { data: machines } = await supabase
-    .from('machines')
-    .select('*')
-    .order('created_at', { ascending: false })
+const PAGE_SIZE = 20
 
-  /* Quick stats computed from the fetched list */
-  const total     = machines?.length ?? 0
-  const available = machines?.filter(m => m.status === 'available').length  ?? 0
-  const active    = machines?.filter(m => !['sold'].includes(m.status)).length ?? 0
-  const sold      = machines?.filter(m => m.status === 'sold').length ?? 0
+export default async function AdminInventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const params = await searchParams
+  const page = Math.max(1, parseInt(params.page ?? '1', 10))
+  const offset = (page - 1) * PAGE_SIZE
+
+  const supabase = await createClient()
+
+  const [
+    { count: totalCount },
+    { count: availableCount },
+    { count: activeCount },
+    { count: soldCount },
+    { data: machines },
+  ] = await Promise.all([
+    supabase.from('machines').select('*', { count: 'exact', head: true }),
+    supabase.from('machines').select('*', { count: 'exact', head: true }).eq('status', 'available'),
+    supabase.from('machines').select('*', { count: 'exact', head: true }).neq('status', 'sold'),
+    supabase.from('machines').select('*', { count: 'exact', head: true }).eq('status', 'sold'),
+    supabase.from('machines').select('*').order('created_at', { ascending: false }).range(offset, offset + PAGE_SIZE - 1),
+  ])
+
+  const total      = totalCount     ?? 0
+  const available  = availableCount ?? 0
+  const active     = activeCount    ?? 0
+  const sold       = soldCount      ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -56,16 +78,19 @@ export default async function AdminInventoryPage() {
             </div>
           </div>
 
-          <Link
-            href="/admin/inventory/new"
-            className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-4 py-2.5 rounded-lg transition-colors duration-150 shadow-md shadow-black/20 flex-shrink-0"
-          >
-            + Add Machine
-          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              href="/admin/inventory/new"
+              className="bg-gold-400 hover:bg-gold-300 text-navy-950 text-sm font-bold px-4 py-2.5 rounded-lg transition-colors duration-150 shadow-md shadow-black/20"
+            >
+              + Add Machine
+            </Link>
+            <AdminMobileNav />
+          </div>
         </div>
 
         {/* Tab bar */}
-        <div className="px-6 overflow-x-auto scrollbar-hide">
+        <div className="hidden sm:block px-6 overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-0 min-w-max border-t border-white/6">
             {TABS.map(tab => {
               const isActive = tab.href === '/admin/inventory'
@@ -105,7 +130,7 @@ export default async function AdminInventoryPage() {
         </div>
 
         {/* ── EMPTY STATE ── */}
-        {!machines || total === 0 ? (
+        {total === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-32">
             <div className="text-white/10 text-7xl mb-6">⚙</div>
             <p className="text-white/35 text-base mb-2">No machines in inventory yet.</p>
@@ -138,7 +163,7 @@ export default async function AdminInventoryPage() {
 
                 {/* Rows */}
                 <tbody>
-                  {machines.map((machine, i) => (
+                  {(machines ?? []).map((machine, i) => (
                     <tr
                       key={machine.id}
                       className={`border-b border-white/5 last:border-0 hover:bg-white/4 transition-colors duration-100 ${
@@ -203,7 +228,7 @@ export default async function AdminInventoryPage() {
               </table>
             </div>
 
-            {/* Table footer: count */}
+            {/* Table footer */}
             <div className="px-5 py-3 border-t border-white/6 flex items-center justify-between">
               <p className="text-[11px] text-white/25">
                 {total} machine{total !== 1 ? 's' : ''} listed
@@ -215,6 +240,36 @@ export default async function AdminInventoryPage() {
                 + Add Machine
               </Link>
             </div>
+            {total >= 5 && (
+              <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/6">
+                <Link
+                  href={`/admin/inventory?page=${page - 1}`}
+                  aria-disabled={page <= 1}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                    page <= 1
+                      ? 'border-white/6 text-white/15 pointer-events-none'
+                      : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  ← Previous
+                </Link>
+                <p className="text-xs text-white/30 tabular-nums">
+                  Page <span className="text-white/55 font-semibold">{page}</span> of{' '}
+                  <span className="text-white/55 font-semibold">{totalPages}</span>
+                </p>
+                <Link
+                  href={`/admin/inventory?page=${page + 1}`}
+                  aria-disabled={page >= totalPages}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                    page >= totalPages
+                      ? 'border-white/6 text-white/15 pointer-events-none'
+                      : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  Next →
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </main>

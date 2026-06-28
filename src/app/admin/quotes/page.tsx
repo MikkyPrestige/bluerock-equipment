@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import AdminMobileNav from '@/components/AdminMobileNav'
 import logo from '@/assests/img/logo.jpg'
 
 /* ── Status badge (dark-adapted) ── */
@@ -21,25 +22,49 @@ const TABS = [
   { label: 'Inventory',    href: '/admin/inventory' },
   { label: 'Quotes',       href: '/admin/quotes' },
   { label: 'Buyers',       href: '/admin/buyers' },
+  { label: 'Waitlist',     href: '/admin/waitlist' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
 ]
 
-export default async function AdminQuotesPage() {
+const PAGE_SIZE = 10
+
+export default async function AdminQuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const params = await searchParams
+  const page = Math.max(1, parseInt(params.page ?? '1', 10))
+  const offset = (page - 1) * PAGE_SIZE
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== process.env.ADMIN_EMAIL) redirect('/auth/login')
 
-  const { data: quotes } = await adminSupabase
-    .from('quotes')
-    .select('*, machines(name, brand, model, price_usd), buyers(company_name, email)')
-    .order('created_at', { ascending: false })
+  const [
+    { count: totalCount },
+    { count: pendingCount },
+    { count: activeCount },
+    { count: completeCount },
+    { data: quotes },
+  ] = await Promise.all([
+    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }),
+    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote'),
+    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled'),
+    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sold'),
+    adminSupabase
+      .from('quotes')
+      .select('*, machines(name, brand, model, price_usd), buyers(company_name, email)')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1),
+  ])
 
-  /* Quick stats from fetched list — no extra DB round-trip */
-  const total    = quotes?.length ?? 0
-  const pending  = quotes?.filter(q => q.status === 'pending_quote').length ?? 0
-  const active   = quotes?.filter(q => !['sold', 'cancelled'].includes(q.status)).length ?? 0
-  const complete = quotes?.filter(q => q.status === 'sold').length ?? 0
+  const total      = totalCount    ?? 0
+  const pending    = pendingCount  ?? 0
+  const active     = activeCount   ?? 0
+  const complete   = completeCount ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -69,11 +94,12 @@ export default async function AdminQuotesPage() {
             <Link href="/admin" className="text-xs text-white/35 hover:text-white/65 transition-colors duration-150">
               Dashboard
             </Link>
+            <AdminMobileNav />
           </div>
         </div>
 
         {/* Tab bar */}
-        <div className="px-6 overflow-x-auto scrollbar-hide">
+        <div className="hidden sm:block px-6 overflow-x-auto scrollbar-hide">
           <div className="flex items-center min-w-max border-t border-white/6">
             {TABS.map(tab => {
               const isActive = tab.href === '/admin/quotes'
@@ -122,7 +148,7 @@ export default async function AdminQuotesPage() {
         </div>
 
         {/* ── EMPTY STATE ── */}
-        {!quotes || total === 0 ? (
+        {total === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-32">
             <div className="text-white/10 text-7xl mb-6">📋</div>
             <p className="text-white/35 text-base mb-2">No quotes yet.</p>
@@ -149,7 +175,7 @@ export default async function AdminQuotesPage() {
 
                 {/* Rows */}
                 <tbody>
-                  {quotes.map((q, i) => {
+                  {(quotes ?? []).map((q, i) => {
                     const machine = q.machines as { name?: string; brand: string; model: string; price_usd: number } | null
                     const buyer   = q.buyers   as { company_name: string | null; email: string } | null
                     const s       = STATUS[q.status] ?? { label: q.status.replace(/_/g, ' '), badge: 'bg-white/8 border-white/12 text-white/40' }
@@ -257,6 +283,36 @@ export default async function AdminQuotesPage() {
                 </p>
               )}
             </div>
+            {total >= 5 && (
+              <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/6">
+                <Link
+                  href={`/admin/quotes?page=${page - 1}`}
+                  aria-disabled={page <= 1}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                    page <= 1
+                      ? 'border-white/6 text-white/15 pointer-events-none'
+                      : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  ← Previous
+                </Link>
+                <p className="text-xs text-white/30 tabular-nums">
+                  Page <span className="text-white/55 font-semibold">{page}</span> of{' '}
+                  <span className="text-white/55 font-semibold">{totalPages}</span>
+                </p>
+                <Link
+                  href={`/admin/quotes?page=${page + 1}`}
+                  aria-disabled={page >= totalPages}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                    page >= totalPages
+                      ? 'border-white/6 text-white/15 pointer-events-none'
+                      : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                  }`}
+                >
+                  Next →
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </main>

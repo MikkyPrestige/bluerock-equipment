@@ -4,7 +4,7 @@ import MachineCard from '@/components/machine/MachineCard'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
 import MobileFilterDrawer from '@/components/machine/MobileFilterDrawer'
 import NavSignOutButton from '@/components/NavSignOutButton'
-import MobileNav from '@/components/MobileNav'
+import PublicMobileNav from '@/components/PublicMobileNav'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
@@ -178,7 +178,7 @@ export default async function MachinesPage({
                 Sign In
               </Link>
             )}
-            <MobileNav isLoggedIn={!!user} isAdmin={isAdmin} />
+            <PublicMobileNav isLoggedIn={!!user} isAdmin={isAdmin} />
           </div>
         </header>
 
@@ -287,6 +287,7 @@ export default async function MachinesPage({
           className="object-cover object-center"
           priority
           quality={85}
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-navy-950/55 via-navy-950/25 to-navy-950/85" />
         <div className="absolute inset-0 bg-gradient-to-r from-navy-950/45 to-transparent" />

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
+import AdminMobileNav from '@/components/AdminMobileNav'
 
 interface Buyer {
   id: string
@@ -29,6 +30,7 @@ const TABS = [
   { label: 'Inventory',    href: '/admin/inventory' },
   { label: 'Quotes',       href: '/admin/quotes' },
   { label: 'Buyers',       href: '/admin/buyers' },
+  { label: 'Waitlist',     href: '/admin/waitlist' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
 ]
@@ -167,11 +169,12 @@ export default function AdminBuyerDetailPage() {
             <Link href="/admin" className="text-xs text-white/35 hover:text-white/65 transition-colors hidden sm:inline">
               Dashboard
             </Link>
+            <AdminMobileNav />
           </div>
         </div>
 
         {/* Tab bar */}
-        <div className="px-6 overflow-x-auto scrollbar-hide">
+        <div className="hidden sm:block px-6 overflow-x-auto scrollbar-hide">
           <div className="flex items-center min-w-max border-t border-white/6">
             {TABS.map(tab => {
               const isActive = tab.href === '/admin/buyers'

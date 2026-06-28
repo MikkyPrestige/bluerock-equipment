@@ -75,6 +75,7 @@ export default function OnboardingPage() {
         className="object-cover opacity-[0.07]"
         priority
         aria-hidden="true"
+        sizes="100vw"
       />
 
       {/* Vignette */}

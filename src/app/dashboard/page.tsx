@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import SignOutButton from './signout-button'
-import MobileNav from '@/components/MobileNav'
+import BuyerMobileNav from '@/components/BuyerMobileNav'
 import QuotesCard, { type QuoteRow } from '@/components/dashboard/QuotesCard'
 import WatchlistCard, { type WatchlistEntry } from '@/components/dashboard/WatchlistCard'
 import VaultCard from '@/components/dashboard/VaultCard'
@@ -156,7 +156,7 @@ export default async function DashboardPage() {
             </Link>
           )}
           <SignOutButton />
-          <MobileNav isLoggedIn={true} isAdmin={isAdmin} />
+          <BuyerMobileNav isAdmin={isAdmin} />
         </div>
       </header>
 
@@ -208,17 +208,34 @@ export default async function DashboardPage() {
 
         {/* ── STATS BAR ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { value: savedCount,         label: 'Machines Saved',  suffix: '' },
-            { value: activeQuoteCount,   label: 'Active Quotes',   suffix: '' },
-            { value: documentCount ?? 0, label: 'Documents Ready', suffix: '' },
-            { value: comparisonCount,    label: 'In Comparison',   suffix: '/3' },
-          ].map(({ value, label, suffix }) => (
-            <div key={label} className="bg-navy-900 border border-white/8 rounded-xl px-4 py-3.5 text-center">
-              <p className="font-display text-2xl font-bold text-gold-400">{value}{suffix}</p>
-              <p className="text-white/30 text-[10px] uppercase tracking-widest mt-1">{label}</p>
-            </div>
-          ))}
+          <Link
+            href="/dashboard/watchlist"
+            className="bg-navy-900 border border-white/8 hover:border-gold-400/25 rounded-xl px-4 py-3.5 text-center transition-all duration-150 group"
+          >
+            <p className="font-display text-2xl font-bold text-gold-400">{savedCount}</p>
+            <p className="text-white/30 text-[10px] uppercase tracking-widest mt-1 group-hover:text-white/50 transition-colors">Machines Saved</p>
+          </Link>
+          <Link
+            href="/dashboard/milestone-tracker"
+            className="bg-navy-900 border border-white/8 hover:border-gold-400/25 rounded-xl px-4 py-3.5 text-center transition-all duration-150 group"
+          >
+            <p className="font-display text-2xl font-bold text-gold-400">{activeQuoteCount}</p>
+            <p className="text-white/30 text-[10px] uppercase tracking-widest mt-1 group-hover:text-white/50 transition-colors">Active Quotes</p>
+          </Link>
+          <Link
+            href="/dashboard/document-vault"
+            className="bg-navy-900 border border-white/8 hover:border-gold-400/25 rounded-xl px-4 py-3.5 text-center transition-all duration-150 group"
+          >
+            <p className="font-display text-2xl font-bold text-gold-400">{documentCount ?? 0}</p>
+            <p className="text-white/30 text-[10px] uppercase tracking-widest mt-1 group-hover:text-white/50 transition-colors">Documents Ready</p>
+          </Link>
+          <Link
+            href="/dashboard/comparison"
+            className="bg-navy-900 border border-white/8 hover:border-gold-400/25 rounded-xl px-4 py-3.5 text-center transition-all duration-150 group"
+          >
+            <p className="font-display text-2xl font-bold text-gold-400">{comparisonCount}<span className="text-base text-white/25">/3</span></p>
+            <p className="text-white/30 text-[10px] uppercase tracking-widest mt-1 group-hover:text-white/50 transition-colors">In Comparison</p>
+          </Link>
         </div>
 
         {/* ── MAIN GRID ── */}
@@ -233,8 +250,8 @@ export default async function DashboardPage() {
                 label="My Quotes & Transactions"
                 count={activeQuoteCount || undefined}
                 action={
-                  <Link href="/machines" className="text-xs text-gold-400 hover:text-gold-300 transition-colors">
-                    Browse Inventory →
+                  <Link href="/dashboard/quotes" className="text-xs text-gold-400 hover:text-gold-300 transition-colors">
+                    View All →
                   </Link>
                 }
               />

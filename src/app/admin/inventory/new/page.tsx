@@ -1,28 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
+import AdminMobileNav from '@/components/AdminMobileNav'
 
 /* ── Constants ── */
-const CATEGORIES     = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
-const BRANDS         = ['Caterpillar', 'Komatsu', 'Volvo', 'Sany', 'Hitachi', 'Liebherr']
-const USE_CASES      = ['Construction', 'Mining & Quarrying', 'Port Operations', 'Agriculture', 'Road Building']
-const WEAR_COMPONENTS= ['undercarriage', 'track_links', 'hydraulic_pumps', 'structural_boom', 'engine']
-const WEAR_OPTIONS   = ['excellent', 'good', 'wear_detected', 'needs_repair']
+const CATEGORIES      = ['Excavator', 'Bulldozer', 'Wheel Loader', 'Motor Grader', 'Articulated Truck', 'Compactor']
+const BRANDS          = ['Caterpillar', 'Komatsu', 'Volvo', 'Sany', 'Hitachi', 'Liebherr']
+const USE_CASES       = ['Construction', 'Mining & Quarrying', 'Port Operations', 'Agriculture', 'Road Building']
+const WEAR_COMPONENTS = ['undercarriage', 'track_links', 'hydraulic_pumps', 'structural_boom', 'engine']
+const WEAR_OPTIONS    = ['excellent', 'good', 'wear_detected', 'needs_repair']
 
 const CATEGORY_EXTRA_FIELDS: Record<string, string[]> = {
-  'Excavator':        ['Bucket Capacity (m³)', 'Track Shoe Width (mm)', 'Swing Speed (rpm)'],
-  'Bulldozer':        ['Blade Width (mm)', 'Ripper Type'],
-  'Wheel Loader':     ['Bucket Capacity (m³)', 'Lift Capacity (kg)'],
-  'Motor Grader':     ['Blade Length (mm)', 'Engine Power (hp)'],
-  'Articulated Truck':['Payload Capacity (tonnes)', 'Body Volume (m³)'],
-  'Compactor':        ['Drum Width (mm)', 'Operating Weight (kg)'],
+  'Excavator':         ['Bucket Capacity (m³)', 'Track Shoe Width (mm)', 'Swing Speed (rpm)'],
+  'Bulldozer':         ['Blade Width (mm)', 'Ripper Type'],
+  'Wheel Loader':      ['Bucket Capacity (m³)', 'Lift Capacity (kg)'],
+  'Motor Grader':      ['Blade Length (mm)', 'Engine Power (hp)'],
+  'Articulated Truck': ['Payload Capacity (tonnes)', 'Body Volume (m³)'],
+  'Compactor':         ['Drum Width (mm)', 'Operating Weight (kg)'],
 }
 
-/* ── Shared style tokens ── */
+/* ── Style tokens ── */
 const INP = [
   'w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-navy-900',
   'placeholder:text-slate-400 focus:outline-none focus:border-gold-400/60',
@@ -30,17 +31,15 @@ const INP = [
 ].join(' ')
 
 const LBL = 'block text-[11px] font-bold text-white/45 uppercase tracking-widest mb-2'
+const REQ  = <span className="text-gold-400 ml-0.5">*</span>
 
-const REQ = <span className="text-gold-400 ml-0.5">*</span>
-
-/* ── Wear button classes ── */
-function wearBtnClass(component: string, option: string, selected: string) {
-  const isActive = selected === option
-  if (isActive) return 'bg-gold-400 border-gold-400 text-navy-950 font-bold rounded-full px-3 py-1 text-[11px] transition-all duration-150 border'
+function wearBtnClass(option: string, selected: string) {
+  if (selected === option) {
+    return 'bg-gold-400 border-gold-400 text-navy-950 font-bold rounded-full px-3 py-1 text-[11px] transition-all duration-150 border'
+  }
   return 'border border-white/20 text-white/40 hover:border-white/45 hover:text-white/65 rounded-full px-3 py-1 text-[11px] transition-all duration-150 cursor-pointer'
 }
 
-/* ── Section wrapper ── */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-navy-900 border border-white/8 rounded-2xl p-6 space-y-5">
@@ -52,8 +51,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-/* ── Field wrapper ── */
-function Field({ label, required, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) {
+function Field({ label, required, children, hint }: {
+  label: string; required?: boolean; children: React.ReactNode; hint?: string
+}) {
   return (
     <div>
       <label className={LBL}>{label}{required && REQ}</label>
@@ -63,40 +63,140 @@ function Field({ label, required, children, hint }: { label: string; required?: 
   )
 }
 
+type SubmitPhase = 'idle' | 'creating' | 'uploading' | 'finalizing'
+
 export default function NewMachinePage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
 
+  const [submitPhase,  setSubmitPhase]  = useState<SubmitPhase>('idle')
+  const [uploadIdx,    setUploadIdx]    = useState(0)
+  const [uploadTotal,  setUploadTotal]  = useState(0)
+  const [error,        setError]        = useState('')
+  const [uploadError,  setUploadError]  = useState('')
+  const [isDragOver,   setIsDragOver]   = useState(false)
+
+  /* ── Form fields ── */
   const [form, setForm] = useState({
-    name: '', brand: '', model: '', year: '', category: '', use_case: '',
+    brand: '', model: '', year: '', category: '', use_case: '',
     engine_hours: '', price_usd: '', yard_country: '', yard_city: '',
     serial_number: '', operating_weight_kg: '', video_url: '',
     status: 'available', description: '', engine_configuration: '', hours_since_service: '',
   })
 
-  const [wearAnalysis, setWearAnalysis] = useState<Record<string, string>>(
+  const [wearAnalysis,  setWearAnalysis]  = useState<Record<string, string>>(
     Object.fromEntries(WEAR_COMPONENTS.map(c => [c, 'good']))
   )
-
   const [categorySpecs, setCategorySpecs] = useState<Record<string, string>>({})
+
+  /* ── Pending photos (before upload) ── */
+  const [pendingFiles,  setPendingFiles]  = useState<File[]>([])
+  const [previewUrls,   setPreviewUrls]   = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function set(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
+  /* ── Photo queue management ── */
+  function addFiles(files: FileList | null) {
+    if (!files || files.length === 0) return
+    const accepted = Array.from(files).filter(f =>
+      ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+    )
+    if (accepted.length === 0) return
+    setPendingFiles(prev => [...prev, ...accepted])
+    setPreviewUrls(prev => [...prev, ...accepted.map(f => URL.createObjectURL(f))])
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  function removePending(index: number) {
+    URL.revokeObjectURL(previewUrls[index])
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function movePending(index: number, dir: 'earlier' | 'later') {
+    const swap = dir === 'earlier' ? index - 1 : index + 1
+    if (swap < 0 || swap >= pendingFiles.length) return
+    setPendingFiles(prev => { const n = [...prev]; [n[index], n[swap]] = [n[swap], n[index]]; return n })
+    setPreviewUrls(prev => { const n = [...prev]; [n[index], n[swap]] = [n[swap], n[index]]; return n })
+  }
+
+  /* ── Drag-and-drop ── */
+  const onDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragOver(true) }, [])
+  const onDragLeave = useCallback(() => setIsDragOver(false), [])
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    addFiles(e.dataTransfer.files)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /* ── Submit: create → upload photos → patch → redirect ── */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
     setError('')
-    const res = await fetch('/api/admin/machines', {
+    setUploadError('')
+    setSubmitPhase('creating')
+
+    /* Step 1 — create the machine record */
+    const createRes = await fetch('/api/admin/machines', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...form, wear_analysis: wearAnalysis, specs: categorySpecs }),
     })
-    const data = await res.json()
-    if (!res.ok) { setError(data.error); setLoading(false); return }
+    const createData = await createRes.json()
+    if (!createRes.ok) {
+      setError(createData.error ?? 'Failed to create machine')
+      setSubmitPhase('idle')
+      return
+    }
+    const machineId: string = createData.machine.id
+
+    /* Step 2 — upload each pending photo sequentially */
+    const uploadedUrls: string[] = []
+    if (pendingFiles.length > 0) {
+      setSubmitPhase('uploading')
+      setUploadTotal(pendingFiles.length)
+      for (let i = 0; i < pendingFiles.length; i++) {
+        setUploadIdx(i + 1)
+        const fd = new FormData()
+        fd.append('file', pendingFiles[i])
+        const photoRes = await fetch(`/api/admin/machines/${machineId}/photos`, {
+          method: 'POST',
+          body: fd,
+          credentials: 'include',
+        })
+        const photoData = await photoRes.json()
+        if (!photoRes.ok) {
+          setUploadError(photoData.error ?? 'Photo upload failed')
+          /* Machine exists but photos failed — go to edit so admin can retry */
+          router.push(`/admin/inventory/${machineId}/edit`)
+          return
+        }
+        uploadedUrls.push(photoData.url)
+      }
+
+      /* Step 3 — patch machine with final media_urls */
+      setSubmitPhase('finalizing')
+      await fetch(`/api/admin/machines/${machineId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_urls: uploadedUrls }),
+        credentials: 'include',
+      })
+    }
+
     router.push('/admin/inventory')
+  }
+
+  const isSubmitting = submitPhase !== 'idle'
+
+  function submitLabel() {
+    if (submitPhase === 'creating')   return 'Creating machine…'
+    if (submitPhase === 'uploading')  return `Uploading photo ${uploadIdx} of ${uploadTotal}…`
+    if (submitPhase === 'finalizing') return 'Finalizing…'
+    return 'Save Machine'
   }
 
   const extraFields = form.category ? CATEGORY_EXTRA_FIELDS[form.category] : null
@@ -118,9 +218,12 @@ export default function NewMachinePage() {
             <span className="text-white/55">Add Machine</span>
           </div>
         </div>
-        <Link href="/admin/inventory" className="text-sm text-white/35 hover:text-white transition-colors duration-150">
-          ← Cancel
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/admin/inventory" className="text-sm text-white/35 hover:text-white transition-colors duration-150">
+            ← Cancel
+          </Link>
+          <AdminMobileNav />
+        </div>
       </header>
 
       {/* ── TITLE BAR ── */}
@@ -191,7 +294,7 @@ export default function NewMachinePage() {
             </div>
           </Section>
 
-          {/* ── CATEGORY-SPECIFIC SPECS (dynamic) ── */}
+          {/* ── CATEGORY-SPECIFIC SPECS ── */}
           {extraFields && extraFields.length > 0 && (
             <Section title={`${form.category} Specifications`}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -199,7 +302,7 @@ export default function NewMachinePage() {
                   <Field key={field} label={field}>
                     <input
                       type="text"
-                      value={categorySpecs[field] || ''}
+                      value={categorySpecs[field] ?? ''}
                       onChange={e => setCategorySpecs(prev => ({ ...prev, [field]: e.target.value }))}
                       className={INP}
                       placeholder={field}
@@ -263,6 +366,120 @@ export default function NewMachinePage() {
             </div>
           </Section>
 
+          {/* ── MACHINE PHOTOS ── */}
+          <Section title="Machine Photos">
+            <p className="text-[11px] text-white/25 -mt-2">
+              Select or drag in photos before saving. First photo becomes the hero image on the listing card.
+            </p>
+
+            {/* Photo grid */}
+            {previewUrls.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {previewUrls.map((url, i) => (
+                  <div key={url} className="rounded-xl overflow-hidden bg-navy-800 border border-white/8">
+                    <div className="relative aspect-video bg-navy-800">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Preview ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute top-2 left-2 bg-navy-950/85 backdrop-blur-sm rounded-md px-2 py-0.5 text-[10px] font-bold text-white/70">
+                        {i === 0 ? 'Hero' : `#${i + 1}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-2 border-t border-white/6">
+                      <button
+                        type="button"
+                        onClick={() => movePending(i, 'earlier')}
+                        disabled={i === 0}
+                        title="Move earlier"
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 text-white/40 hover:border-white/30 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-150"
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removePending(i)}
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-red-500/20 text-red-400/70 hover:border-red-500/50 hover:text-red-400 transition-all duration-150"
+                      >
+                        Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => movePending(i, 'later')}
+                        disabled={i === previewUrls.length - 1}
+                        title="Move later"
+                        className="text-[11px] font-semibold px-2.5 py-1 rounded-lg border border-white/10 text-white/40 hover:border-white/30 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-150"
+                      >
+                        →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Drop zone */}
+            <div
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl py-8 cursor-pointer transition-colors duration-150 ${
+                isSubmitting
+                  ? 'border-gold-400/30 cursor-not-allowed'
+                  : isDragOver
+                    ? 'border-gold-400/60 bg-gold-400/4'
+                    : 'border-white/15 hover:border-gold-400/40'
+              }`}
+              onClick={() => !isSubmitting && fileInputRef.current?.click()}
+            >
+              {isSubmitting && submitPhase === 'uploading' ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-gold-400/30 border-t-gold-400 rounded-full animate-spin" />
+                  <p className="text-sm font-medium text-white/50">
+                    Uploading {uploadIdx} of {uploadTotal} photos…
+                  </p>
+                </>
+              ) : (
+                <>
+                  <svg className="w-6 h-6 text-white/25" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-white/50">
+                      {isDragOver ? 'Drop photos here' : 'Upload Photos'}
+                    </p>
+                    <p className="text-xs text-white/25 mt-0.5">
+                      {pendingFiles.length > 0
+                        ? `${pendingFiles.length} photo${pendingFiles.length !== 1 ? 's' : ''} queued — click to add more`
+                        : 'Drag & drop or click · JPG, PNG, WebP · 5+ recommended'}
+                    </p>
+                  </div>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                onChange={e => addFiles(e.target.files)}
+                disabled={isSubmitting}
+                className="hidden"
+              />
+            </div>
+
+            {uploadError && (
+              <p className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
+                {uploadError}
+              </p>
+            )}
+
+            <p className="text-[11px] text-white/20">
+              Photos are uploaded when you save the machine. Use ← → to reorder. First photo is the hero image.
+            </p>
+          </Section>
+
           {/* ── 150-POINT WEAR ANALYSIS ── */}
           <Section title="150-Point Wear Analysis">
             <div className="space-y-4">
@@ -280,7 +497,7 @@ export default function NewMachinePage() {
                         key={option}
                         type="button"
                         onClick={() => setWearAnalysis(prev => ({ ...prev, [component]: option }))}
-                        className={wearBtnClass(component, option, wearAnalysis[component])}
+                        className={wearBtnClass(option, wearAnalysis[component])}
                       >
                         {option.replace(/_/g, ' ')}
                       </button>
@@ -302,14 +519,17 @@ export default function NewMachinePage() {
           <div className="flex items-center gap-4 pt-2">
             <button
               type="submit"
-              disabled={loading}
-              className="bg-gold-400 hover:bg-gold-300 disabled:opacity-50 disabled:cursor-not-allowed text-navy-950 font-bold px-8 py-3 rounded-xl text-sm transition-colors duration-150 shadow-lg shadow-black/20"
+              disabled={isSubmitting}
+              className="bg-gold-400 hover:bg-gold-300 disabled:opacity-60 disabled:cursor-not-allowed text-navy-950 font-bold px-8 py-3 rounded-xl text-sm transition-colors duration-150 shadow-lg shadow-black/20 flex items-center gap-2.5 min-w-[180px] justify-center"
             >
-              {loading ? 'Saving…' : 'Save Machine'}
+              {isSubmitting && (
+                <span className="w-4 h-4 border-2 border-navy-950/30 border-t-navy-950 rounded-full animate-spin flex-shrink-0" />
+              )}
+              {submitLabel()}
             </button>
             <Link
               href="/admin/inventory"
-              className="text-sm text-white/40 hover:text-white/70 transition-colors duration-150"
+              className={`text-sm text-white/40 hover:text-white/70 transition-colors duration-150 ${isSubmitting ? 'pointer-events-none opacity-40' : ''}`}
             >
               Cancel
             </Link>
@@ -322,8 +542,8 @@ export default function NewMachinePage() {
       <footer className="bg-navy-950 border-t border-white/5 py-6 px-6 mt-8">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
           <p className="text-xs text-white/20">BlueRock Equipment — Admin Operations</p>
-          <Link href="/admin" className="text-xs text-white/25 hover:text-white/50 transition-colors">
-            ← Admin Dashboard
+          <Link href="/admin/inventory" className="text-xs text-white/25 hover:text-white/50 transition-colors">
+            ← Inventory
           </Link>
         </div>
       </footer>

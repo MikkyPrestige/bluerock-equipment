@@ -163,6 +163,7 @@ export default async function MachineDetailPage({
           className="object-cover object-center"
           priority
           quality={90}
+          sizes="100vw"
         />
         {/* Multi-layer overlay for deep bottom legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/60 to-navy-950/15" />

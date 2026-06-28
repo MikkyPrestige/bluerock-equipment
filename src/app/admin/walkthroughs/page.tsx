@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo               from '@/assests/img/logo.jpg'
+import AdminMobileNav     from '@/components/AdminMobileNav'
 import AddWalkthroughForm from '@/components/admin/AddWalkthroughForm'
 import WalkthroughEditor  from '@/components/admin/WalkthroughEditor'
 
@@ -19,6 +20,7 @@ const TABS = [
   { label: 'Inventory',    href: '/admin/inventory' },
   { label: 'Quotes',       href: '/admin/quotes' },
   { label: 'Buyers',       href: '/admin/buyers' },
+  { label: 'Waitlist',     href: '/admin/waitlist' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
 ]
@@ -44,28 +46,57 @@ type WRow = {
   machines: unknown
 }
 
-export default async function AdminWalkthroughsPage() {
+const PAGE_SIZE = 10
+
+export default async function AdminWalkthroughsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const params = await searchParams
+  const page = Math.max(1, parseInt(params.page ?? '1', 10))
+  const offset = (page - 1) * PAGE_SIZE
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== process.env.ADMIN_EMAIL) redirect('/auth/login')
 
+  const now    = new Date()
+  const nowISO = now.toISOString()
+
   const [
-    { data: walkthroughs },
+    { data: upcomingRows },
+    { count: totalAll },
+    { count: completedCount },
+    { count: noShowCount },
+    { count: pastCount },
+    { data: pastRows },
     { data: buyers },
     { data: machines },
   ] = await Promise.all([
     adminSupabase
       .from('walkthroughs')
       .select('*, buyers(id, email, company_name), machines(id, name, brand, model)')
+      .gte('scheduled_at', nowISO)
+      .eq('status', 'scheduled')
       .order('scheduled_at', { ascending: true }),
+    adminSupabase.from('walkthroughs').select('*', { count: 'exact', head: true }),
+    adminSupabase.from('walkthroughs').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+    adminSupabase.from('walkthroughs').select('*', { count: 'exact', head: true }).eq('status', 'no_show'),
+    adminSupabase.from('walkthroughs').select('*', { count: 'exact', head: true }).or(`scheduled_at.lt.${nowISO},status.neq.scheduled`),
+    adminSupabase
+      .from('walkthroughs')
+      .select('*, buyers(id, email, company_name), machines(id, name, brand, model)')
+      .or(`scheduled_at.lt.${nowISO},status.neq.scheduled`)
+      .order('scheduled_at', { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1),
     adminSupabase.from('buyers').select('id, email, company_name').order('company_name'),
     adminSupabase.from('machines').select('id, name, brand, model').neq('status', 'sold').order('name'),
   ])
 
-  const all      = (walkthroughs ?? []) as WRow[]
-  const now      = new Date()
-  const upcoming = all.filter(w => new Date(w.scheduled_at) >= now && w.status === 'scheduled')
-  const past     = all.filter(w => new Date(w.scheduled_at) < now  || w.status !== 'scheduled')
+  const upcoming   = (upcomingRows ?? []) as WRow[]
+  const past       = (pastRows ?? []) as WRow[]
+  const totalPages = Math.max(1, Math.ceil((pastCount ?? 0) / PAGE_SIZE))
 
   const buyerList   = (buyers ?? []).map(b => ({ id: b.id, email: b.email, company_name: b.company_name }))
   const machineList = (machines ?? []).map(m => {
@@ -74,10 +105,10 @@ export default async function AdminWalkthroughsPage() {
   })
 
   const stats = [
-    { label: 'Total',     value: all.length },
+    { label: 'Total',     value: totalAll ?? 0 },
     { label: 'Upcoming',  value: upcoming.length, accent: upcoming.length > 0 ? 'text-blue-400' : undefined },
-    { label: 'Completed', value: all.filter(w => w.status === 'completed').length, accent: 'text-emerald-400' },
-    { label: 'No Shows',  value: all.filter(w => w.status === 'no_show').length,   accent: all.filter(w => w.status === 'no_show').length > 0 ? 'text-amber-400' : undefined },
+    { label: 'Completed', value: completedCount ?? 0, accent: 'text-emerald-400' },
+    { label: 'No Shows',  value: noShowCount ?? 0, accent: (noShowCount ?? 0) > 0 ? 'text-amber-400' : undefined },
   ]
 
   return (
@@ -106,11 +137,12 @@ export default async function AdminWalkthroughsPage() {
             <div className="hidden sm:block h-4 w-px bg-white/10" />
             {/* Modal trigger — renders + Log Walkthrough button + overlay */}
             <AddWalkthroughForm buyers={buyerList} machines={machineList} />
+            <AdminMobileNav />
           </div>
         </div>
 
         {/* Tab bar */}
-        <div className="px-6 overflow-x-auto scrollbar-hide">
+        <div className="hidden sm:block px-6 overflow-x-auto scrollbar-hide">
           <div className="flex items-center min-w-max border-t border-white/6">
             {TABS.map(tab => {
               const isActive = tab.href === '/admin/walkthroughs'
@@ -253,10 +285,10 @@ export default async function AdminWalkthroughsPage() {
         </section>
 
         {/* ── PAST & OTHER ── */}
-        {past.length > 0 && (
+        {(pastCount ?? 0) > 0 && (
           <section>
             <h2 className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-4">
-              Past & Other ({past.length})
+              Past & Other ({pastCount ?? 0})
             </h2>
 
             <div className="bg-navy-900 border border-white/8 rounded-2xl overflow-hidden">
@@ -322,8 +354,38 @@ export default async function AdminWalkthroughsPage() {
                 </table>
               </div>
               <div className="px-5 py-3 border-t border-white/6 flex items-center justify-between">
-                <p className="text-[10px] text-white/20">{past.length} record{past.length !== 1 ? 's' : ''}</p>
+                <p className="text-[10px] text-white/20">{pastCount ?? 0} record{(pastCount ?? 0) !== 1 ? 's' : ''}</p>
               </div>
+              {(pastCount ?? 0) >= 5 && (
+                <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/6">
+                  <Link
+                    href={`/admin/walkthroughs?page=${page - 1}`}
+                    aria-disabled={page <= 1}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                      page <= 1
+                        ? 'border-white/6 text-white/15 pointer-events-none'
+                        : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                    }`}
+                  >
+                    ← Previous
+                  </Link>
+                  <p className="text-xs text-white/30 tabular-nums">
+                    Page <span className="text-white/55 font-semibold">{page}</span> of{' '}
+                    <span className="text-white/55 font-semibold">{totalPages}</span>
+                  </p>
+                  <Link
+                    href={`/admin/walkthroughs?page=${page + 1}`}
+                    aria-disabled={page >= totalPages}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
+                      page >= totalPages
+                        ? 'border-white/6 text-white/15 pointer-events-none'
+                        : 'border-white/15 text-white/50 hover:border-white/30 hover:text-white/80'
+                    }`}
+                  >
+                    Next →
+                  </Link>
+                </div>
+              )}
             </div>
           </section>
         )}

@@ -1,6 +1,7 @@
 import { adminSupabase } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import Image from 'next/image'
+import AdminMobileNav from '@/components/AdminMobileNav'
 import logo from '@/assests/img/logo.jpg'
 
 /* ── Admin section cards ── */
@@ -25,8 +26,16 @@ const NAV = [
     href: '/admin/buyers',
     label: 'Buyers',
     tag: 'Community',
-    desc: 'Manage buyer tiers, KYC verification, and arrival alerts',
+    desc: 'Manage buyer tiers, KYC verification, and account details',
     primary: { label: 'Open Buyers', href: '/admin/buyers' },
+    secondary: null,
+  },
+  {
+    href: '/admin/waitlist',
+    label: 'Waitlist',
+    tag: 'Community',
+    desc: 'Manage buyer arrival alerts and waitlist for held or sold machines',
+    primary: { label: 'Open Waitlist', href: '/admin/waitlist' },
     secondary: null,
   },
   {
@@ -118,6 +127,7 @@ export default async function AdminDashboardPage({
           >
             Buyer Dashboard
           </Link>
+          <AdminMobileNav />
         </div>
       </header>
 
@@ -297,6 +307,7 @@ export default async function AdminDashboardPage({
             <Link href="/admin/inventory"    className="hover:text-white/60 transition-colors">Inventory</Link>
             <Link href="/admin/quotes"       className="hover:text-white/60 transition-colors">Quotes</Link>
             <Link href="/admin/buyers"       className="hover:text-white/60 transition-colors">Buyers</Link>
+            <Link href="/admin/waitlist"     className="hover:text-white/60 transition-colors">Waitlist</Link>
             <Link href="/admin/walkthroughs" className="hover:text-white/60 transition-colors">Walkthroughs</Link>
             <Link href="/admin/freight-rates"className="hover:text-white/60 transition-colors">Freight</Link>
           </nav>

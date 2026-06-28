@@ -36,6 +36,7 @@ export default function LoginPage() {
         className="object-cover opacity-[0.08]"
         priority
         aria-hidden="true"
+        sizes="100vw"
       />
       {/* Vignette */}
       <div className="absolute inset-0 bg-gradient-to-b from-navy-950/60 via-transparent to-navy-950/80 pointer-events-none" />

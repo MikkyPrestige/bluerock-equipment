@@ -50,6 +50,7 @@ export default function SignupPage() {
         className="object-cover opacity-[0.09]"
         priority
         aria-hidden="true"
+        sizes="100vw"
       />
       {/* Vignette */}
       <div className="absolute inset-0 bg-gradient-to-b from-navy-950/70 via-transparent to-navy-950/80 pointer-events-none" />
