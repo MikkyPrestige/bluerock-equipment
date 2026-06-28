@@ -4,6 +4,7 @@ import { redirect }       from 'next/navigation'
 import Link               from 'next/link'
 import Image              from 'next/image'
 import SignOutButton      from '@/app/dashboard/signout-button'
+import MobileNav         from '@/components/MobileNav'
 import WatchlistClient, { type WatchlistEntry } from '@/components/dashboard/WatchlistClient'
 import logo from '@/assests/img/logo.jpg'
 
@@ -59,6 +60,7 @@ export default async function WatchlistPage() {
             </Link>
           )}
           <SignOutButton />
+          <MobileNav isLoggedIn={true} isAdmin={isAdmin} />
         </div>
       </header>
 

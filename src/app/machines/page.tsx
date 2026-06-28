@@ -4,6 +4,7 @@ import MachineCard from '@/components/machine/MachineCard'
 import ComparisonTray from '@/components/comparison/ComparisonTray'
 import MobileFilterDrawer from '@/components/machine/MobileFilterDrawer'
 import NavSignOutButton from '@/components/NavSignOutButton'
+import MobileNav from '@/components/MobileNav'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
@@ -177,6 +178,7 @@ export default async function MachinesPage({
                 Sign In
               </Link>
             )}
+            <MobileNav isLoggedIn={!!user} isAdmin={isAdmin} />
           </div>
         </header>
 

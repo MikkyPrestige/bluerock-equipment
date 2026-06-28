@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
 import NavSignOutButton from '@/components/NavSignOutButton'
+import MobileNav from '@/components/MobileNav'
 import heroImg from '@/assests/img/machinery/hero-excavator-openpit-mine.jpg'
 import ctaBgImg from '@/assests/img/machinery/hero-industrial-port-sunrise.jpg'
 import excImg from '@/assests/img/machinery/machine-card-excavator-openpit.jpg'
@@ -90,6 +91,7 @@ export default async function HomePage() {
                 </Link>
               </>
             )}
+            <MobileNav isLoggedIn={!!user} isAdmin={isAdmin} />
           </nav>
         </div>
       </header>

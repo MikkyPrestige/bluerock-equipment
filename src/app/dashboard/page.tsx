@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import SignOutButton from './signout-button'
+import MobileNav from '@/components/MobileNav'
 import QuotesCard, { type QuoteRow } from '@/components/dashboard/QuotesCard'
 import WatchlistCard, { type WatchlistEntry } from '@/components/dashboard/WatchlistCard'
 import VaultCard from '@/components/dashboard/VaultCard'
@@ -155,6 +156,7 @@ export default async function DashboardPage() {
             </Link>
           )}
           <SignOutButton />
+          <MobileNav isLoggedIn={true} isAdmin={isAdmin} />
         </div>
       </header>
 
