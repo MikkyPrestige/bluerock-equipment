@@ -11,18 +11,23 @@ export default function SupportTicketsClient({ buyerId }: { buyerId: string }) {
 
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showNewTicket, setShowNewTicket] = useState(false)
   const [openTicketId, setOpenTicketId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('support_tickets')
         .select('*')
         .eq('buyer_id', buyerId)
         .order('updated_at', { ascending: false })
       if (!cancelled) {
+        // Distinguish "fetch failed" from "genuinely no tickets" — otherwise
+        // a transient failure silently renders the empty state and the buyer
+        // never learns their ticket history didn't actually load.
+        setLoadError(!!error)
         setTickets((data ?? []) as SupportTicket[])
         setLoading(false)
       }
@@ -49,7 +54,11 @@ export default function SupportTicketsClient({ buyerId }: { buyerId: string }) {
 
       <div className="flex items-center justify-between gap-4">
         <p className="text-white/40 text-sm">
-          {tickets.length === 0 ? 'No support requests yet.' : `${tickets.length} ticket${tickets.length !== 1 ? 's' : ''}`}
+          {loadError
+            ? 'Couldn’t load your tickets.'
+            : tickets.length === 0
+              ? 'No support requests yet.'
+              : `${tickets.length} ticket${tickets.length !== 1 ? 's' : ''}`}
         </p>
         <button
           onClick={() => setShowNewTicket(true)}
@@ -62,6 +71,11 @@ export default function SupportTicketsClient({ buyerId }: { buyerId: string }) {
       <div className="bg-navy-900 border border-white/8 rounded-2xl overflow-hidden">
         {loading ? (
           <p className="text-white/25 text-sm py-16 text-center">Loading…</p>
+        ) : loadError ? (
+          <div className="text-center py-16">
+            <p className="text-white/30 text-sm mb-1">We couldn&apos;t load your support tickets.</p>
+            <p className="text-white/15 text-xs">Please refresh the page and try again.</p>
+          </div>
         ) : tickets.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-white/25 text-sm mb-1">No support requests yet.</p>

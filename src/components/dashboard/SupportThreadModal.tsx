@@ -52,7 +52,9 @@ export default function SupportThreadModal({
   const [sendError, setSendError] = useState('')
   const [sendBlockedByPolicy, setSendBlockedByPolicy] = useState(false)
   const [closing, setClosing] = useState(false)
+  const [closeError, setCloseError] = useState('')
   const [downloadingPath, setDownloadingPath] = useState<string | null>(null)
+  const [viewError, setViewError] = useState('')
 
   const isBlocked = status === 'closed' || status === 'resolved'
   const showNewTicketCta = isBlocked && !(status === 'closed' && closedBy === 'buyer')
@@ -162,7 +164,7 @@ export default function SupportThreadModal({
       const path = `${buyerId}/${folder}/${sanitizeFileName(file.name)}`
       const { error: uploadErr } = await supabase.storage.from(SUPPORT_BUCKET).upload(path, file, { contentType: file.type })
       if (uploadErr) {
-        setSendError(`Attachment upload failed: ${uploadErr.message}`)
+        setSendError('One of your attachments failed to upload. Please remove it and try again.')
         setSending(false)
         return
       }
@@ -214,7 +216,10 @@ export default function SupportThreadModal({
           onUpdated({ id: ticket.id, status: 'closed', closed_by: null })
         }
       } else {
-        setSendError(error?.message ?? 'Failed to send message')
+        // Anything that isn't the RLS closure signal is an ordinary transient
+        // failure (network hiccup, unexpected server error) — never surface
+        // the raw Postgres/Supabase error text to the buyer.
+        setSendError('We couldn’t send your message. Please check your connection and try again.')
       }
       setSending(false)
       return
@@ -234,18 +239,47 @@ export default function SupportThreadModal({
 
   async function handleClose() {
     setClosing(true)
-    await supabase.rpc('support_close_ticket_as_buyer', { p_ticket_id: ticket.id })
-    setStatus('closed')
-    setClosedBy('buyer')
-    onUpdated({ id: ticket.id, status: 'closed', closed_by: 'buyer' })
+    setCloseError('')
+
+    const { error } = await supabase.rpc('support_close_ticket_as_buyer', { p_ticket_id: ticket.id })
+    if (error) {
+      setCloseError('We couldn’t close this ticket. Please check your connection and try again.')
+      setClosing(false)
+      return
+    }
+
+    // The RPC is a no-op (not an error) if the row no longer matches its
+    // WHERE clause — e.g. admin already closed/resolved this ticket in the
+    // moments before this call landed. Re-read the real row instead of
+    // assuming our intent succeeded, so a race never mislabels an
+    // admin-closed ticket as buyer-closed.
+    const { data: freshTicket } = await supabase
+      .from('support_tickets')
+      .select('status, closed_by')
+      .eq('id', ticket.id)
+      .single()
+
+    if (freshTicket) {
+      setStatus(freshTicket.status)
+      setClosedBy(freshTicket.closed_by)
+      onUpdated({ id: ticket.id, status: freshTicket.status, closed_by: freshTicket.closed_by })
+    } else {
+      setStatus('closed')
+      setClosedBy('buyer')
+      onUpdated({ id: ticket.id, status: 'closed', closed_by: 'buyer' })
+    }
     setClosing(false)
   }
 
   async function handleView(path: string) {
     setDownloadingPath(path)
+    setViewError('')
     const { data, error } = await supabase.storage.from(SUPPORT_BUCKET).createSignedUrl(path, 300)
     setDownloadingPath(null)
-    if (error || !data) return
+    if (error || !data) {
+      setViewError('Couldn’t open this file. Please try again.')
+      return
+    }
     window.open(data.signedUrl, '_blank', 'noopener')
   }
 
@@ -270,6 +304,9 @@ export default function SupportThreadModal({
             </button>
           )}
         </div>
+        {closeError && (
+          <p className="text-red-400 text-[11px] px-5 py-2 border-b border-white/6 flex-shrink-0">{closeError}</p>
+        )}
 
         {/* Message thread */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3 min-h-[280px]">
@@ -313,6 +350,10 @@ export default function SupportThreadModal({
           )}
           <div ref={bottomRef} />
         </div>
+
+        {viewError && (
+          <p className="text-red-400 text-[11px] px-5 py-2 border-t border-white/6 flex-shrink-0 text-center">{viewError}</p>
+        )}
 
         {/* Composer */}
         <div className="border-t border-white/6 px-5 py-4 flex-shrink-0">
