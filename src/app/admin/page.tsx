@@ -54,6 +54,14 @@ const NAV = [
     primary: { label: 'Open Rates', href: '/admin/freight-rates' },
     secondary: null,
   },
+  {
+    href: '/admin/support',
+    label: 'Support Tickets',
+    tag: 'Community',
+    desc: 'Respond to buyer support requests and track resolution status',
+    primary: { label: 'Open Support', href: '/admin/support' },
+    secondary: null,
+  },
 ]
 
 /* ── Status badges (dark-adapted) ── */
@@ -83,12 +91,14 @@ export default async function AdminDashboardPage({
     { count: quoteCount },
     { count: buyerCount },
     { count: totalQuotes },
+    { data: supportUnreadRaw },
     { data: recentQuotes },
   ] = await Promise.all([
     adminSupabase.from('machines').select('*', { count: 'exact', head: true }).neq('status', 'sold'),
     adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote'),
     adminSupabase.from('buyers').select('*', { count: 'exact', head: true }),
     adminSupabase.from('quotes').select('*', { count: 'exact', head: true }),
+    adminSupabase.rpc('support_admin_unread_count'),
     adminSupabase
       .from('quotes')
       .select('id, status, created_at, machines(name, brand, model), buyers(company_name, email)')
@@ -96,7 +106,8 @@ export default async function AdminDashboardPage({
       .range(offset, offset + PAGE_SIZE - 1),
   ])
 
-  const totalPages = Math.max(1, Math.ceil((totalQuotes ?? 0) / PAGE_SIZE))
+  const totalPages    = Math.max(1, Math.ceil((totalQuotes ?? 0) / PAGE_SIZE))
+  const supportUnread = typeof supportUnreadRaw === 'number' ? supportUnreadRaw : 0
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -168,6 +179,11 @@ export default async function AdminDashboardPage({
               <div key={href} className="bg-navy-900 border border-white/8 rounded-2xl p-5 flex flex-col hover:border-white/15 transition-colors duration-150 group">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[10px] font-bold text-gold-400/60 uppercase tracking-widest">{tag}</span>
+                  {href === '/admin/support' && supportUnread > 0 && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400">
+                      {supportUnread} unread
+                    </span>
+                  )}
                 </div>
                 <Link href={href} className="font-display font-bold text-white text-lg leading-tight mb-2 group-hover:text-gold-300 transition-colors duration-150">
                   {label}

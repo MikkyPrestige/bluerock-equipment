@@ -38,6 +38,7 @@ const TABS = [
   { label: 'Waitlist',     href: '/admin/waitlist' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
+  { label: 'Support',      href: '/admin/support' },
 ]
 
 /* ── Section card shell ── */

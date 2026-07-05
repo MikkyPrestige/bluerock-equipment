@@ -59,6 +59,7 @@ export default async function DashboardPage() {
     { count: comparisonTotal },
     { count: documentCount },
     { data: latestDocRow },
+    { data: supportUnreadRaw },
   ] = await Promise.all([
     supabase.from('buyers').select('*').eq('id', user.id).single(),
 
@@ -117,6 +118,8 @@ export default async function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+
+    supabase.rpc('support_buyer_unread_count'),
   ])
 
   const savedCount       = watchlistTotal ?? 0
@@ -127,6 +130,7 @@ export default async function DashboardPage() {
   const tier             = buyer?.tier ?? 'observer'
   const tierBadge        = TIER_BADGE[tier] ?? TIER_BADGE.observer
   const isAdmin          = user.email === process.env.ADMIN_EMAIL
+  const supportUnread    = typeof supportUnreadRaw === 'number' ? supportUnreadRaw : 0
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -143,8 +147,16 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-4">
           <nav className="hidden sm:flex items-center gap-5 text-sm text-white/40">
-            <Link href="/machines" className="hover:text-white transition-colors duration-150">Inventory</Link>
-            <Link href="/trust"    className="hover:text-white transition-colors duration-150">Trust Hub</Link>
+            <Link href="/machines"         className="hover:text-white transition-colors duration-150">Inventory</Link>
+            <Link href="/trust"            className="hover:text-white transition-colors duration-150">Trust Hub</Link>
+            <Link href="/dashboard/support" className="hover:text-white transition-colors duration-150 flex items-center gap-1.5">
+              Support
+              {supportUnread > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gold-400 text-navy-950">
+                  {supportUnread}
+                </span>
+              )}
+            </Link>
           </nav>
           <div className="h-4 w-px bg-white/10 hidden sm:block" />
           {isAdmin && (

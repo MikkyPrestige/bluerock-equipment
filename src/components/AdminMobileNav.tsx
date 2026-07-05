@@ -9,10 +9,18 @@ import { useRouter } from 'next/navigation'
 export default function AdminMobileNav() {
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    supabase.rpc('support_admin_unread_count').then(({ data }) => {
+      if (typeof data === 'number') setUnreadCount(data)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSignOut() {
     setOpen(false)
@@ -133,6 +141,24 @@ export default function AdminMobileNav() {
               <path d="M2 14l4-8 4 5 3-3 5 6" />
             </svg>
             Freight Rates
+          </Link>
+
+          <Link
+            href="/admin/support"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-3 py-3 text-sm text-white/70 hover:text-white hover:bg-white/6 rounded-xl transition-colors duration-150"
+          >
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">
+              <path d="M10 13.5a1 1 0 100 2 1 1 0 000-2z" />
+              <path d="M10 10.5v-1c1.2 0 2-.8 2-1.8 0-1-.9-1.7-2-1.7s-2 .7-2 1.7" />
+              <circle cx="10" cy="10" r="8" />
+            </svg>
+            Support
+            {unreadCount > 0 && (
+              <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-gold-400 text-navy-950">
+                {unreadCount}
+              </span>
+            )}
           </Link>
 
           <Link

@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import logo from '@/assests/img/logo.jpg'
 import AdminMobileNav from '@/components/AdminMobileNav'
+import AdminNewTicketModal from '@/components/admin/AdminNewTicketModal'
 
 interface Buyer {
   id: string
@@ -33,6 +34,7 @@ const TABS = [
   { label: 'Waitlist',     href: '/admin/waitlist' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
+  { label: 'Support',      href: '/admin/support' },
 ]
 
 const TIER_BADGES: Record<string, string> = {
@@ -51,6 +53,7 @@ const LBL = 'block text-[10px] font-bold text-white/35 uppercase tracking-widest
 
 export default function AdminBuyerDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
 
   const [buyer,    setBuyer]    = useState<Buyer | null>(null)
   const [activity, setActivity] = useState<Activity | null>(null)
@@ -62,6 +65,7 @@ export default function AdminBuyerDetailPage() {
   const [orig,  setOrig]  = useState({ tier: 'observer', kyc: false, notes: '' })
 
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [showNewTicket, setShowNewTicket] = useState(false)
 
   useEffect(() => {
     fetch(`/api/admin/buyers/${id}`, { credentials: 'include' })
@@ -343,6 +347,24 @@ export default function AdminBuyerDetailPage() {
           </div>
         </div>
 
+        {/* ── SUPPORT ── */}
+        <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+          <h2 className="font-display text-base font-bold text-gold-400 pb-4 border-b border-white/8 mb-5">
+            Support
+          </h2>
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-white/50">
+              Start a new support ticket with {displayName} directly.
+            </p>
+            <button
+              onClick={() => setShowNewTicket(true)}
+              className="bg-gold-400 hover:bg-gold-300 text-navy-950 font-bold px-5 py-2.5 rounded-xl text-sm transition-colors duration-150 shadow-lg shadow-black/20 flex-shrink-0"
+            >
+              + Start Support Ticket
+            </button>
+          </div>
+        </div>
+
         {/* ── BUYER ACTIVITY ── */}
         {activity && (
           <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
@@ -409,6 +431,15 @@ export default function AdminBuyerDetailPage() {
           </Link>
         </div>
       </footer>
+
+      {showNewTicket && (
+        <AdminNewTicketModal
+          buyerId={id}
+          buyerLabel={displayName}
+          onClose={() => setShowNewTicket(false)}
+          onCreated={ticketId => router.push(`/admin/support/${ticketId}`)}
+        />
+      )}
 
     </div>
   )
