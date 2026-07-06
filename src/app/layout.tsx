@@ -24,6 +24,12 @@ export const metadata: Metadata = {
     title: 'BlueRock Equipment — Premium Direct-Sale Heavy Machinery',
     description: 'Inspected, documented, and ready to ship. Buy direct with a 48-hour price lock.',
     type: 'website',
+    images: [
+      {
+        url: 'https://bluerockequipment.store/logo.png',
+        alt: 'BlueRock Equipment',
+      },
+    ],
   },
   icons: {
     icon: '/favicon.ico',
