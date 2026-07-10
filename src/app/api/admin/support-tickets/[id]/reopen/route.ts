@@ -26,7 +26,11 @@ export async function POST(
     .single()
 
   if (error || !ticket) {
-    return NextResponse.json({ error: error?.message ?? 'Ticket not found' }, { status: 404 })
+    const notFound = error?.code === 'PGRST116' || !ticket
+    return NextResponse.json(
+      { error: notFound ? 'Ticket not found' : 'Something went wrong. Please try again.' },
+      { status: notFound ? 404 : 500 }
+    )
   }
 
   after(async () => {

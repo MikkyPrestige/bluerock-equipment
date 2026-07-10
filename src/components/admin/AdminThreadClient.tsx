@@ -43,7 +43,9 @@ export default function AdminThreadClient({
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
   const [actionBusy, setActionBusy] = useState<'resolve' | 'close' | 'reopen' | null>(null)
+  const [actionError, setActionError] = useState('')
   const [downloadingPath, setDownloadingPath] = useState<string | null>(null)
+  const [viewError, setViewError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -139,13 +141,23 @@ export default function AdminThreadClient({
 
   async function runAction(action: 'resolve' | 'close' | 'reopen') {
     setActionBusy(action)
+    setActionError('')
     try {
       const res = await fetch(`/api/admin/support-tickets/${ticketId}/${action}`, { method: 'POST', credentials: 'include' })
       if (res.ok) {
+        // Only trust the local status change to the response that actually
+        // confirmed it — never assume the call did what was intended just
+        // because it was sent, since a failed or no-op update behind a 500
+        // must not read as success on screen.
         if (action === 'resolve') setStatus('resolved')
         if (action === 'close') setStatus('closed')
         if (action === 'reopen') setStatus('open')
+      } else {
+        const json = await res.json().catch(() => null)
+        setActionError(json?.error ?? 'Couldn’t update this ticket. Please try again.')
       }
+    } catch {
+      setActionError('Network error. Please check your connection and try again.')
     } finally {
       setActionBusy(null)
     }
@@ -153,6 +165,7 @@ export default function AdminThreadClient({
 
   async function handleView(path: string) {
     setDownloadingPath(path)
+    setViewError('')
     try {
       const res = await fetch('/api/admin/support-tickets/attachment-url', {
         method: 'POST',
@@ -161,7 +174,13 @@ export default function AdminThreadClient({
         credentials: 'include',
       })
       const json = await res.json()
-      if (res.ok && json.url) window.open(json.url, '_blank', 'noopener')
+      if (res.ok && json.url) {
+        window.open(json.url, '_blank', 'noopener')
+      } else {
+        setViewError('Couldn’t open this file. Please try again.')
+      }
+    } catch {
+      setViewError('Couldn’t open this file. Please try again.')
     } finally {
       setDownloadingPath(null)
     }
@@ -207,6 +226,9 @@ export default function AdminThreadClient({
           )}
         </div>
       </div>
+      {actionError && (
+        <p className="text-red-400 text-[11px] px-5 py-2 border-b border-white/8">{actionError}</p>
+      )}
 
       {/* Thread */}
       <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3 min-h-[320px] max-h-[520px]">
@@ -250,6 +272,9 @@ export default function AdminThreadClient({
         )}
         <div ref={bottomRef} />
       </div>
+      {viewError && (
+        <p className="text-red-400 text-[11px] px-5 py-2 border-t border-white/8 text-center">{viewError}</p>
+      )}
 
       {/* Composer */}
       <div className="border-t border-white/8 px-5 py-4">

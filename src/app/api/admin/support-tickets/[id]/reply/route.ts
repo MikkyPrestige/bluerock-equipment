@@ -53,7 +53,15 @@ export async function POST(
     .single()
 
   if (ticketErr || !ticket) {
-    return NextResponse.json({ error: ticketErr?.message ?? 'Ticket not found' }, { status: 404 })
+    // PGRST116 is PostgREST's code for .single() matching zero rows — a
+    // genuine "this ticket doesn't exist" case. Anything else is an
+    // unexpected DB/connection failure, and its raw text must never reach
+    // the admin UI even though admin is a technical user.
+    const notFound = ticketErr?.code === 'PGRST116' || !ticket
+    return NextResponse.json(
+      { error: notFound ? 'Ticket not found' : 'Something went wrong. Please try again.' },
+      { status: notFound ? 404 : 500 }
+    )
   }
 
   // Written into the buyer's own folder (not admin's), same as buyer-sent
@@ -70,7 +78,7 @@ export async function POST(
         .from(SUPPORT_BUCKET)
         .upload(path, file, { contentType: file.type })
       if (uploadErr) {
-        return NextResponse.json({ error: `Attachment upload failed: ${uploadErr.message}` }, { status: 500 })
+        return NextResponse.json({ error: 'One or more attachments failed to upload. Please try again.' }, { status: 500 })
       }
       uploadedPaths.push(path)
     }
@@ -87,7 +95,7 @@ export async function POST(
     })
 
   if (insertErr) {
-    return NextResponse.json({ error: insertErr.message }, { status: 500 })
+    return NextResponse.json({ error: 'We couldn’t send your reply. Please try again.' }, { status: 500 })
   }
 
   // Replying always continues the conversation, regardless of prior status.

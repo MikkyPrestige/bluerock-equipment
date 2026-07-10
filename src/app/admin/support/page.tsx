@@ -49,7 +49,7 @@ export default async function AdminSupportPage({
     { count: repliedCount },
     { count: resolvedCount },
     { count: closedCount },
-    { data: tickets, count: filteredCount },
+    { data: tickets, count: filteredCount, error: listError },
   ] = await Promise.all([
     adminSupabase.from('support_tickets').select('*', { count: 'exact', head: true }),
     adminSupabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
@@ -197,7 +197,12 @@ export default async function AdminSupportPage({
         </div>
 
         {/* ── TABLE ── */}
-        {total === 0 ? (
+        {listError ? (
+          <div className="bg-navy-900 border border-white/8 rounded-2xl p-10 text-center">
+            <p className="text-white/30 text-sm mb-1">We couldn&apos;t load support tickets.</p>
+            <p className="text-white/15 text-xs">Please refresh the page and try again.</p>
+          </div>
+        ) : total === 0 ? (
           <div className="bg-navy-900 border border-white/8 rounded-2xl p-10 text-center">
             <p className="text-white/25 text-sm mb-1">No support tickets{statusFilter ? ` with status “${SUPPORT_STATUS_LABELS[statusFilter]}”` : ''}.</p>
             <p className="text-white/15 text-xs">Buyer-submitted tickets will appear here.</p>

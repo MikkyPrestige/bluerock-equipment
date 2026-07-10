@@ -16,11 +16,23 @@ export async function POST(
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const { error } = await adminSupabase
+
+  // .select().single() forces detection of a zero-row update (stale/bad id) —
+  // without it, an update matching nothing still returns no error, so a no-op
+  // would otherwise be reported back as a successful resolve.
+  const { data: ticket, error } = await adminSupabase
     .from('support_tickets')
     .update({ status: 'resolved', closed_by: null })
     .eq('id', id)
+    .select('id')
+    .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error || !ticket) {
+    const notFound = error?.code === 'PGRST116' || !ticket
+    return NextResponse.json(
+      { error: notFound ? 'Ticket not found' : 'Something went wrong. Please try again.' },
+      { status: notFound ? 404 : 500 }
+    )
+  }
   return NextResponse.json({ ok: true })
 }

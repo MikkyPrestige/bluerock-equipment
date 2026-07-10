@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (buyerErr || !buyer) {
-    return NextResponse.json({ error: buyerErr?.message ?? 'Buyer not found' }, { status: 404 })
+    const notFound = buyerErr?.code === 'PGRST116' || !buyer
+    return NextResponse.json(
+      { error: notFound ? 'Buyer not found' : 'Something went wrong. Please try again.' },
+      { status: notFound ? 404 : 500 }
+    )
   }
 
   const { data: ticket, error: ticketErr } = await adminSupabase
@@ -35,7 +39,7 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (ticketErr || !ticket) {
-    return NextResponse.json({ error: ticketErr?.message ?? 'Failed to create ticket' }, { status: 500 })
+    return NextResponse.json({ error: 'We couldn’t create this ticket. Please try again.' }, { status: 500 })
   }
 
   const trimmedMessage = message?.trim()
@@ -50,7 +54,7 @@ export async function POST(request: NextRequest) {
       })
 
     if (msgErr) {
-      return NextResponse.json({ error: msgErr.message }, { status: 500 })
+      return NextResponse.json({ error: 'We created the ticket but couldn’t save your opening message. Please try again.' }, { status: 500 })
     }
   }
 

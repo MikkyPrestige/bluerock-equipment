@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     .createSignedUrl(path, 300)
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message ?? 'Could not generate link' }, { status: 500 })
+    return NextResponse.json({ error: 'Couldn’t open this file. Please try again.' }, { status: 500 })
   }
 
   return NextResponse.json({ url: data.signedUrl })
