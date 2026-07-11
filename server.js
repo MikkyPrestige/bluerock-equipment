@@ -486,9 +486,13 @@ const server = http.createServer(async (req, res) => {
     return
   }
 
-  if (req.url === '/health' && req.method === 'GET') {
+  if (
+    (req.url === '/health' || req.url === '/health/') &&
+    (req.method === 'GET' || req.method === 'HEAD')
+  ) {
     res.writeHead(200, { 'Content-Type': 'application/json' })
-    res.end(JSON.stringify({ status: 'ok', service: 'bluerock-backend' }))
+    // HEAD must not include a body, per HTTP semantics — headers/status only.
+    res.end(req.method === 'GET' ? JSON.stringify({ status: 'ok', service: 'bluerock-backend' }) : undefined)
     return
   }
 
