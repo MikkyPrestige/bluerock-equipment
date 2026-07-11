@@ -381,15 +381,30 @@ ${machine.description ? `
 </html>`
 }
 
+// Must match the installed @sparticuz/chromium-min version — its pack format is tied to this tag.
+const CHROMIUM_PACK_VERSION = 'v149.0.0'
+
+// Sparticuz publishes architecture-suffixed pack files (e.g. chromium-v149.0.0-pack.x64.tar),
+// never a bare "chromium-v149.0.0-pack.tar" — that filename 404s. process.arch maps 1:1 onto
+// their suffixes ('x64' / 'arm64'), so build the URL from whatever this process is actually on
+// rather than assuming Render's current x86_64 forever.
+function defaultChromiumPackUrl() {
+  const archSuffix = process.arch === 'arm64' ? 'arm64' : 'x64'
+  return `https://github.com/Sparticuz/chromium/releases/download/${CHROMIUM_PACK_VERSION}/chromium-${CHROMIUM_PACK_VERSION}-pack.${archSuffix}.tar`
+}
+
 async function getChromePath() {
   if (!IS_PROD) {
     return process.env.LOCAL_CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
   }
-  // Render: set CHROMIUM_PATH env var to installed system Chrome (e.g. /usr/bin/chromium-browser)
+  // Primary path: Render's CHROMIUM_PATH points at the system Chromium installed via the build
+  // command (apt-get install -y chromium-browser). This is checked first and returns immediately —
+  // the download fallback below never runs when this is set.
   if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH
-  // Otherwise download the binary from CHROMIUM_DOWNLOAD_URL env var
-  const dlUrl = process.env.CHROMIUM_DOWNLOAD_URL
-    || 'https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.tar'
+  // Fallback only: download the binary. Prefer a self-hosted fast URL via CHROMIUM_DOWNLOAD_URL;
+  // the default below hits GitHub Releases directly, which is slow — acceptable as a last resort,
+  // not as the primary path.
+  const dlUrl = process.env.CHROMIUM_DOWNLOAD_URL || defaultChromiumPackUrl()
   return chromium.executablePath(dlUrl)
 }
 

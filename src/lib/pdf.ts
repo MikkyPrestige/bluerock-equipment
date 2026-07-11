@@ -12,6 +12,17 @@ export function escHtml(str: unknown): string {
     .replace(/"/g, '&quot;')
 }
 
+// Must match the installed @sparticuz/chromium-min version — its pack format is tied to this tag.
+const CHROMIUM_PACK_VERSION = 'v149.0.0'
+
+// Sparticuz publishes architecture-suffixed pack files (e.g. chromium-v149.0.0-pack.x64.tar),
+// never a bare "chromium-v149.0.0-pack.tar" — that filename 404s. process.arch maps 1:1 onto
+// their suffixes ('x64' / 'arm64').
+function defaultChromiumPackUrl(): string {
+  const archSuffix = process.arch === 'arm64' ? 'arm64' : 'x64'
+  return `https://github.com/Sparticuz/chromium/releases/download/${CHROMIUM_PACK_VERSION}/chromium-${CHROMIUM_PACK_VERSION}-pack.${archSuffix}.tar`
+}
+
 async function getExecutablePath(): Promise<string> {
   if (!IS_PROD) {
     return (
@@ -21,8 +32,7 @@ async function getExecutablePath(): Promise<string> {
   }
   if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH
   return chromium.executablePath(
-    process.env.CHROMIUM_DOWNLOAD_URL ??
-      'https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.tar'
+    process.env.CHROMIUM_DOWNLOAD_URL ?? defaultChromiumPackUrl()
   )
 }
 
