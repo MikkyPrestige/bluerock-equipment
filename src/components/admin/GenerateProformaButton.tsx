@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function GenerateProformaButton({
   quoteId,
@@ -17,11 +18,17 @@ export default function GenerateProformaButton({
     setState('loading')
     setErrMsg('')
     try {
-      const res  = await fetch('/api/pdf/proforma-invoice', {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setErrMsg('Not signed in'); setState('error'); return }
+
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/pdf/proforma-invoice`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ quoteId }),
-        credentials: 'include',
       })
       const json = await res.json()
       if (!res.ok) { setErrMsg(json.error || 'Generation failed'); setState('error'); return }

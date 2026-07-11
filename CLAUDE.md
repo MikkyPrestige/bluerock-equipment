@@ -110,8 +110,9 @@ freight_rates     → id, port_name, country, base_cost_usd, updated_at
 
 - **Always use:** `puppeteer-core` + `@sparticuz/chromium-min`
 - **Never use:** Full `puppeteer` package (too large for Render free tier)
+- Runs on: **Render** (`server.js`), not Vercel — see Hard Constraint #5
 - Local Chrome path: `C:\Program Files\Google\Chrome\Application\chrome.exe` (Windows)
-- Production: `@sparticuz/chromium-min` auto-resolves path
+- Production: set `CHROMIUM_PATH` on Render for fastest cold start; `CHROMIUM_DOWNLOAD_URL` is the fallback
 - HTML templates: Inline CSS only, no external stylesheets or Google Fonts
 
 ### Resend (Email)
@@ -221,12 +222,15 @@ CREATE POLICY "machines_public_read" ON machines
    - Use `status` flags, `superseded_at` timestamps
    - Never `DELETE FROM` these tables
 
-5. **Puppeteer runs in Next.js API routes (not Render)**
-   - PDF generation runs directly inside `/api/pdf/*` routes using `puppeteer-core` + `@sparticuz/chromium-min`
-   - Shared utility: `src/lib/pdf.ts` exports `generatePDF(html)` and `escHtml()`
+5. **Puppeteer runs on the Render backend (not Vercel)**
+   - Reverted 2026-07-10 after a Vercel move (2026-06-19) turned out to be an unverified regression — see Decision #12
+   - Inspection Report and Proforma Invoice generation live in `server.js` (`/api/pdf/inspection-report`, `/api/pdf/proforma-invoice`), using `puppeteer-core` + `@sparticuz/chromium-min`
+   - `server.js` holds its own `adminSupabase` client (service_role) to fetch machine/quote/buyer data and write PDFs to storage — it does not receive pre-fetched data from Vercel
+   - Auth: the admin UI sends the caller's Supabase `access_token` as `Authorization: Bearer <token>`; `server.js` verifies it via `adminSupabase.auth.getUser(token)` and checks `user.email === process.env.ADMIN_EMAIL` (proforma also allows `quote.buyer_id === user.id`). Render has no access to the Vercel session cookie, so cookie-based auth doesn't work across the two origins — bearer token is the mechanism, not cookies
    - Local dev: uses `C:\Program Files\Google\Chrome\Application\chrome.exe` (or `LOCAL_CHROME_PATH` env var)
-   - Production (Vercel): `@sparticuz/chromium-min` downloads the binary; set `CHROMIUM_PATH` or `CHROMIUM_DOWNLOAD_URL` env var on Vercel
-   - The Render backend (`server.js`) is NOT used for PDF generation
+   - Production (Render): set `CHROMIUM_PATH` (preferred, points to an installed system Chromium) or `CHROMIUM_DOWNLOAD_URL` env var — Render has no serverless execution ceiling, so a slow chromium-min cold-start download is a latency annoyance, not a hard failure, unlike on Vercel
+   - `src/lib/pdf.ts` (Vercel-side `generatePDF`/`escHtml`/`generateScreenshot`) still exists and is still used by `watchlist/export` and `comparison/export` — those were never part of this move and stay on Vercel
+   - The old Vercel routes `src/app/api/pdf/inspection-report/route.ts` and `src/app/api/pdf/proforma-invoice/route.ts` were deleted, not just deprecated
 
 6. **RLS Before Data**
    - Enable RLS on every table immediately after creation
@@ -260,17 +264,18 @@ CREATE POLICY "machines_public_read" ON machines
 
 ### Vercel (Frontend)
 - [ ] Set `RESEND_API_KEY` env var in Vercel dashboard
-- [ ] Set `CHROMIUM_PATH` or `CHROMIUM_DOWNLOAD_URL` env var in Vercel (for PDF generation)
 - [ ] Verify `ADMIN_EMAIL` matches the admin Supabase auth account
 - [ ] Verify `NEXT_PUBLIC_CALENDLY_URL` is set and points to the live Calendly event
-- [ ] Verify `NEXT_PUBLIC_BACKEND_URL` points to `https://bluerock-equipment.onrender.com`
+- [ ] Verify `NEXT_PUBLIC_BACKEND_URL` points to `https://bluerock-equipment.onrender.com` (required at build time — it's inlined into the client bundle for `GenerateReportButton`/`GenerateProformaButton`)
 
 ### Render (Backend)
 - [ ] Install Chromium on Render (build command: `apt-get install -y chromium-browser && npm install`)
 - [ ] Set `CHROMIUM_PATH=/usr/bin/chromium-browser` env var on Render
 - [ ] Set `NODE_ENV=production` env var on Render
 - [ ] Set `ALLOWED_ORIGIN=https://bluerock-equipment.vercel.app` on Render
+- [ ] **New as of the 2026-07-10 Render revert:** set `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ADMIN_EMAIL` on Render — `server.js` now fetches machine/quote data and verifies admin identity itself, so it needs these the same way the Vercel API routes always did. Without them, `/api/pdf/*` will fail on every request. Not yet confirmed set as of this entry — check before relying on the endpoints in production.
 - [ ] Verify `/health` endpoint returns `{ "status": "ok" }`
+- [ ] Smoke-test both `/api/pdf/inspection-report` and `/api/pdf/proforma-invoice` against the **live** Render URL (not localhost) — local testing only exercises the local-Chrome code path, not the `chromium-min` cold-start path that actually runs in production
 
 ### Resend (Email)
 - [ ] Verify domain `bluerockequipment.com` in Resend dashboard (takes 48 hours DNS propagation)
@@ -289,8 +294,9 @@ CREATE POLICY "machines_public_read" ON machines
 - ✅ All admin API routes check `user.email === process.env.ADMIN_EMAIL`
 - ✅ Buyer API routes verify `quote.buyer_id === user.id` before returning data
 - ✅ Document downloads verify ownership before generating signed URLs
-- ✅ PDF API routes (`/api/pdf/*`) run server-side only — no client-side Puppeteer
+- ✅ PDF generation (`server.js` on Render) runs server-side only — no client-side Puppeteer
 - ✅ Render backend CORS restricted to Vercel frontend origin
+- ✅ Render's `/api/pdf/*` endpoints independently verify the caller's bearer token and admin status — they are a separate trust boundary from the Next.js admin pages and are not protected by `proxy.ts`
 
 ---
 
@@ -314,7 +320,7 @@ CREATE POLICY "machines_public_read" ON machines
 ### PDF / Email
 
 - ❌ External CSS or Google Fonts in Puppeteer templates → fonts don't load
-- ❌ Running Puppeteer on Vercel → exceeds 50MB size limit
+- ❌ Running Puppeteer on Vercel without setting `maxDuration` and a fast `CHROMIUM_PATH`/`CHROMIUM_DOWNLOAD_URL` → cold-start chromium download blows the default 10s (Hobby) function timeout. (Bundle size itself was checked and was fine at ~3.4MB — the actual failure mode was timing/config, not the 50MB limit. See Decision #12.)
 - ❌ Unverified Resend domain before launch → emails in spam
 - ❌ Synchronous email sends in request handler → request hangs
 
@@ -337,9 +343,10 @@ CREATE POLICY "machines_public_read" ON machines
 6. **Public Trust Hub is Phase 1** — Override from v3.0 proposal
 7. **Calendly walkthrough is Phase 1** — Override from v3.0 proposal
 8. **Admin API route for machine inserts** — RLS blocks direct browser inserts as expected
-9. **Render Chromium setup** — `@sparticuz/chromium-min` requires either `CHROMIUM_PATH` env var (pointing to installed system Chrome, e.g. `/usr/bin/chromium-browser`) OR `CHROMIUM_DOWNLOAD_URL` env var (pointing to `https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.tar`). If neither is set, it downloads from that default URL on first call. Set `CHROMIUM_PATH` on Render for fastest cold start. The Next.js API route uses `NEXT_PUBLIC_BACKEND_URL` (already in .env.local) to call the Render backend.
+9. **Render Chromium setup** — `@sparticuz/chromium-min` requires either `CHROMIUM_PATH` env var (pointing to installed system Chrome, e.g. `/usr/bin/chromium-browser`) OR `CHROMIUM_DOWNLOAD_URL` env var (pointing to `https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.tar`). If neither is set, it downloads from that default URL on first call. Set `CHROMIUM_PATH` on Render for fastest cold start. The admin buttons (`GenerateReportButton`, `GenerateProformaButton`) call the Render backend directly using `NEXT_PUBLIC_BACKEND_URL` (already in .env.local).
 10. **Proforma PDF storage** — `quotes.proforma_invoice_url` stores the file path (not a signed URL). Generate signed URLs on demand from Sprint 6 Document Vault. File path format: `proforma/{quote_id}/v{n}.pdf` in the private `documents` bucket.
 11. **PDF versioning** — Each new generation for a quote supersedes the previous (`documents.superseded_at` is set). Only the latest active version has `superseded_at = NULL`.
+12. **PDF generation moved from Vercel back to Render (2026-07-10)** — The 2026-06-19 move to Vercel API routes (see the now-superseded prior version of Hard Constraint #5) was never actually verified against Vercel's real serverless limits. Investigation found: the deployed bundle size was fine (~3.4MB, nowhere near Vercel's 50MB/250MB ceiling — `puppeteer-core` + `chromium-min` genuinely solves the Handbook's original size concern), but neither PDF route set `maxDuration` (defaulting to Vercel Hobby's 10s ceiling), and `CHROMIUM_PATH`/`CHROMIUM_DOWNLOAD_URL` were never confirmed set on Vercel, so `chromium-min` fell back to a slow direct GitHub Releases download on cold start — a combination that was failing Proforma Invoice generation in production. The two prior "working" PDFs in the database were traced to local `npm run dev` testing against prod Supabase during the original build session, not genuine Vercel invocations. Moving back to Render removes the hard timeout entirely (Render's only constraint is the 15-min-idle cold start, mitigated by an external uptime ping every 10–14 min, set up outside this codebase). `server.js` now does its own Supabase admin-client data fetching (previously it only rendered pre-built HTML received in the request body) and its own bearer-token auth check, since it no longer receives pre-authenticated, pre-fetched data from a Vercel route.
 
 ---
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 type State = 'idle' | 'loading' | 'done' | 'error'
 
@@ -19,9 +20,16 @@ export default function GenerateReportButton({
     setState('loading')
     setErrMsg('')
     try {
-      const res  = await fetch('/api/pdf/inspection-report', {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setErrMsg('Not signed in'); setState('error'); return }
+
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/pdf/inspection-report`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ machine_id: machineId }),
       })
       const json = await res.json()
