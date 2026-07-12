@@ -466,21 +466,36 @@ async function getAuthedUser(req) {
   return data.user
 }
 
-const ALLOWED_ORIGINS = new Set([
+// Only the two PDF routes are called cross-origin (browser -> Render, from the admin UI).
+// /health has no browser CORS caller (uptime monitors, server-to-server) and the pack of
+// origins below is deliberately not applied globally — scoped per-route, set explicitly at
+// the top of each PDF handler below.
+const PDF_ROUTE_PATHS = new Set(['/api/pdf/inspection-report', '/api/pdf/proforma-invoice'])
+
+// www.bluerockequipment.store is the canonical production origin — bluerockequipment.store
+// (apex) 308-redirects to it, so the apex itself never actually appears as a fetch Origin,
+// but it's listed too in case that redirect behavior ever changes. bluerock-equipment.vercel.app
+// stays allowed since it's still live and reachable independent of the custom domain.
+const PDF_ALLOWED_ORIGINS = new Set([
+  'https://www.bluerockequipment.store',
+  'https://bluerockequipment.store',
   'https://bluerock-equipment.vercel.app',
   'http://localhost:3000',
 ])
 
-const server = http.createServer(async (req, res) => {
+function applyPdfCors(req, res) {
   const origin = req.headers.origin
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (origin && PDF_ALLOWED_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin)
   }
   res.setHeader('Vary', 'Origin')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+}
 
-  if (req.method === 'OPTIONS') {
+const server = http.createServer(async (req, res) => {
+  if (PDF_ROUTE_PATHS.has(req.url) && req.method === 'OPTIONS') {
+    applyPdfCors(req, res)
     res.writeHead(204)
     res.end()
     return
@@ -497,6 +512,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.url === '/api/pdf/inspection-report' && req.method === 'POST') {
+    applyPdfCors(req, res)
     try {
       const user = await getAuthedUser(req)
       if (!user || user.email !== process.env.ADMIN_EMAIL) {
@@ -546,6 +562,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.url === '/api/pdf/proforma-invoice' && req.method === 'POST') {
+    applyPdfCors(req, res)
     try {
       const user = await getAuthedUser(req)
       if (!user) { sendJson(res, 401, { error: 'Unauthorized' }); return }
