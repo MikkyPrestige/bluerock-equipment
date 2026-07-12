@@ -90,6 +90,10 @@ export default async function AdminQuoteDetailPage({
 
   if (error || !quote) notFound()
 
+  const currentProforma = documents?.find(
+    d => d.document_type === 'proforma' && !d.superseded_at
+  )
+
   const m = quote.machines as Record<string, unknown>
   const b = quote.buyers   as Record<string, unknown>
 
@@ -270,7 +274,11 @@ export default async function AdminQuoteDetailPage({
           <p className="text-white/35 text-xs mb-4 leading-relaxed">
             Save pricing above before generating. The PDF is stored securely in the buyer&apos;s Document Vault.
           </p>
-          <GenerateProformaButton quoteId={id} hasProforma={!!quote.proforma_invoice_url} />
+          <GenerateProformaButton
+            quoteId={id}
+            hasProforma={!!quote.proforma_invoice_url}
+            currentDocumentId={currentProforma?.id ?? null}
+          />
         </Section>
 
         {/* ── TRANSACTION PROGRESS ── */}

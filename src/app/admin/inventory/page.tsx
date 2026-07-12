@@ -220,6 +220,7 @@ export default async function AdminInventoryPage({
                           <GenerateReportButton
                             machineId={machine.id}
                             hasReport={!!machine.inspection_report_url}
+                            reportUrl={machine.inspection_report_url}
                           />
                         </div>
                       </td>

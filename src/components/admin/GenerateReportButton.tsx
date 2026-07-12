@@ -8,9 +8,11 @@ type State = 'idle' | 'loading' | 'done' | 'error'
 export default function GenerateReportButton({
   machineId,
   hasReport,
+  reportUrl = null,
 }: {
   machineId: string
   hasReport: boolean
+  reportUrl?: string | null
 }) {
   const [state, setState]   = useState<State>('idle')
   const [url, setUrl]       = useState<string | null>(null)
@@ -42,37 +44,37 @@ export default function GenerateReportButton({
     }
   }
 
-  if (state === 'done' && url) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors duration-150"
-      >
-        View Report ↗
-      </a>
-    )
-  }
-
-  if (state === 'error') {
-    return (
-      <span className="text-xs text-red-400">
-        {errMsg}{' '}
-        <button onClick={handleClick} className="underline hover:text-red-300 transition-colors">
-          Retry
-        </button>
-      </span>
-    )
-  }
+  const viewUrl = url ?? reportUrl
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={state === 'loading'}
-      className="text-xs font-semibold text-gold-400 hover:text-gold-300 disabled:text-white/25 disabled:cursor-wait transition-colors duration-150"
-    >
-      {state === 'loading' ? 'Generating…' : hasReport ? 'Regenerate' : 'Generate Report'}
-    </button>
+    <div className="flex items-center gap-4">
+      {viewUrl && (
+        <a
+          href={viewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors duration-150"
+        >
+          View Report ↗
+        </a>
+      )}
+
+      {state === 'error' ? (
+        <span className="text-xs text-red-400">
+          {errMsg}{' '}
+          <button onClick={handleClick} className="underline hover:text-red-300 transition-colors">
+            Retry
+          </button>
+        </span>
+      ) : (
+        <button
+          onClick={handleClick}
+          disabled={state === 'loading'}
+          className="text-xs font-semibold text-gold-400 hover:text-gold-300 disabled:text-white/25 disabled:cursor-wait transition-colors duration-150"
+        >
+          {state === 'loading' ? 'Generating…' : hasReport ? 'Regenerate' : 'Generate Report'}
+        </button>
+      )}
+    </div>
   )
 }
