@@ -153,7 +153,7 @@ export default function VaultCard({ activeQuoteId }: Props) {
 
       <div className="pt-3 mt-1 border-t border-white/6">
         <Link
-          href={`/dashboard/quotes/${activeQuoteId}`}
+          href="/dashboard/documents"
           className="text-xs text-gold-400 hover:text-gold-300 transition-colors"
         >
           View all documents →

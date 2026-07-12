@@ -3,6 +3,41 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+function ViewProformaLink({ documentId }: { documentId: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle')
+
+  async function handleView() {
+    setState('loading')
+    try {
+      const res  = await fetch(`/api/documents/${documentId}/download`, { credentials: 'include' })
+      const json = await res.json()
+      if (!res.ok || !json.url) { setState('error'); return }
+      window.open(json.url, '_blank', 'noopener')
+      setState('idle')
+    } catch {
+      setState('error')
+    }
+  }
+
+  if (state === 'error') {
+    return (
+      <button onClick={handleView} className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors duration-150">
+        Failed — retry
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleView}
+      disabled={state === 'loading'}
+      className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 disabled:text-emerald-400/40 transition-colors duration-150"
+    >
+      {state === 'loading' ? 'Opening…' : 'View ↗'}
+    </button>
+  )
+}
+
 export default function GenerateProformaButton({
   quoteId,
   hasProforma,
@@ -12,6 +47,7 @@ export default function GenerateProformaButton({
 }) {
   const [state, setState]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [filePath, setFilePath] = useState<string | null>(null)
+  const [documentId, setDocumentId] = useState<string | null>(null)
   const [errMsg, setErrMsg] = useState('')
 
   async function handleClick() {
@@ -33,6 +69,7 @@ export default function GenerateProformaButton({
       const json = await res.json()
       if (!res.ok) { setErrMsg(json.error || 'Generation failed'); setState('error'); return }
       setFilePath(json.filePath)
+      setDocumentId(json.documentId ?? null)
       setState('done')
     } catch {
       setErrMsg('Network error')
@@ -42,9 +79,12 @@ export default function GenerateProformaButton({
 
   if (state === 'done') {
     return (
-      <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg">
-        ✓ Proforma generated — <span className="font-mono text-emerald-300">{filePath}</span>
-      </p>
+      <div className="flex items-center gap-3 flex-wrap">
+        <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg">
+          ✓ Proforma generated — <span className="font-mono text-emerald-300">{filePath}</span>
+        </p>
+        {documentId && <ViewProformaLink documentId={documentId} />}
+      </div>
     )
   }
 

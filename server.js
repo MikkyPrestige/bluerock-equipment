@@ -642,13 +642,13 @@ const server = http.createServer(async (req, res) => {
           .eq('id', existing[0].id)
       }
 
-      const { error: insertErr } = await adminSupabase.from('documents').insert({
+      const { data: insertedDoc, error: insertErr } = await adminSupabase.from('documents').insert({
         quote_id: quoteId,
         buyer_id: quote.buyer_id,
         document_type: 'proforma',
         file_path: filePath,
         version: nextVersion,
-      })
+      }).select('id').single()
 
       if (insertErr) { console.error('[proforma-invoice] Insert error:', insertErr); sendJson(res, 500, { error: 'Document record failed' }); return }
 
@@ -657,7 +657,7 @@ const server = http.createServer(async (req, res) => {
         .update({ proforma_invoice_url: filePath, updated_at: now.toISOString() })
         .eq('id', quoteId)
 
-      sendJson(res, 200, { filePath })
+      sendJson(res, 200, { filePath, documentId: insertedDoc.id })
     } catch (err) {
       console.error('[pdf/proforma-invoice]', err)
       sendJson(res, 500, { error: 'PDF generation failed', detail: err.message })
