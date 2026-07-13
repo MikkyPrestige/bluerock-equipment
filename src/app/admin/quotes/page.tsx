@@ -62,8 +62,8 @@ export default async function AdminQuotesPage({
       ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).not('archived_at', 'is', null)
       : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).is('archived_at', null),
     showArchived
-      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending_quote', 'revision_requested']).not('archived_at', 'is', null)
-      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending_quote', 'revision_requested']).is('archived_at', null),
+      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending_quote', 'revision_requested', 'payment_pending']).not('archived_at', 'is', null)
+      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending_quote', 'revision_requested', 'payment_pending']).is('archived_at', null),
     showArchived
       ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled').not('archived_at', 'is', null)
       : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled').is('archived_at', null),

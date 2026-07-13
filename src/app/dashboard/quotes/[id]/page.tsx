@@ -6,6 +6,7 @@ import Image from 'next/image'
 import MilestoneTracker from '@/components/quote/MilestoneTracker'
 import DocumentVault    from '@/components/quote/DocumentVault'
 import InvoiceReviewActions from '@/components/quote/InvoiceReviewActions'
+import PaymentSubmission from '@/components/quote/PaymentSubmission'
 import logo             from '@/assests/img/logo.jpg'
 
 const STATUS: Record<string, { label: string; badge: string }> = {
@@ -177,6 +178,19 @@ export default async function BuyerQuoteDetailPage({
               status={quote.status}
               revisionReason={quote.revision_reason}
               proformaDocumentId={currentProforma?.id ?? null}
+            />
+          </div>
+        )}
+
+        {/* Payment — Submit / Awaiting Verification */}
+        {(quote.status === 'buyer_accepted' || quote.status === 'payment_pending') && (
+          <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+            <p className="text-xs font-bold text-white/35 uppercase tracking-widest mb-4">Payment</p>
+            <PaymentSubmission
+              quoteId={id}
+              status={quote.status}
+              paymentReference={quote.payment_reference}
+              paymentRejectionReason={quote.payment_rejection_reason}
             />
           </div>
         )}

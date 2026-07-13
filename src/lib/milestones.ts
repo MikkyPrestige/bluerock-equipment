@@ -14,6 +14,7 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   export_cert:      'Export Certificate',
   customs_manifest: 'Customs Manifest',
   packing_list:     'Packing List',
+  payment_proof:    'Payment Proof',
 }
 
 export const TRADE_DOC_TYPES = [

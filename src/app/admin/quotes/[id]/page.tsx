@@ -11,6 +11,7 @@ import MilestoneTracker   from '@/components/quote/MilestoneTracker'
 import MilestoneSwitchboard from '@/components/admin/MilestoneSwitchboard'
 import DocumentVault      from '@/components/quote/DocumentVault'
 import DocumentLedger     from '@/components/admin/DocumentLedger'
+import PaymentVerificationPanel from '@/components/admin/PaymentVerificationPanel'
 
 /* ── Status badge map ── */
 const STATUS: Record<string, { label: string; badge: string }> = {
@@ -93,6 +94,9 @@ export default async function AdminQuoteDetailPage({
 
   const currentProforma = documents?.find(
     d => d.document_type === 'proforma' && !d.superseded_at
+  )
+  const currentPaymentProof = documents?.find(
+    d => d.document_type === 'payment_proof' && !d.superseded_at
   )
 
   const m = quote.machines as Record<string, unknown>
@@ -297,6 +301,18 @@ export default async function AdminQuoteDetailPage({
             currentDocumentId={currentProforma?.id ?? null}
           />
         </Section>
+
+        {/* ── PAYMENT VERIFICATION ── */}
+        {['buyer_accepted', 'payment_pending', 'payment_confirmed', 'sold'].includes(quote.status) && (
+          <Section title="Payment Verification">
+            <PaymentVerificationPanel
+              quoteId={id}
+              status={quote.status}
+              paymentReference={quote.payment_reference}
+              proofDocumentId={currentPaymentProof?.id ?? null}
+            />
+          </Section>
+        )}
 
         {/* ── TRANSACTION PROGRESS ── */}
         <Section title="Transaction Progress">
