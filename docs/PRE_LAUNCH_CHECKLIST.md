@@ -2,10 +2,10 @@
 
 ## 1. Email & Notifications (Resend)
 
-- [ ] **Verify sending domain** — Go to resend.com/domains, add bluerockequipment.com, add SPF and DKIM DNS records at your domain registrar. Wait up to 48 hours for propagation.
+- [ ] **Verify sending domain** — Go to resend.com/domains, add bluerockequipment.store, add SPF and DKIM DNS records at your domain registrar. Wait up to 48 hours for propagation.
   - **Trigger:** Must be done before onboarding any real buyers
   - **Why:** Resend sandbox mode only allows sending to meekyberry6@gmail.com. All other recipients (buyers) will get a 403 error until domain is verified
-  - **After verification:** Update `RESEND_FROM_EMAIL` in Vercel environment variables to: `BlueRock Equipment <notifications@bluerockequipment.com>`
+  - **After verification:** Update `RESEND_FROM_EMAIL` in Vercel environment variables to: `BlueRock Equipment <notifications@bluerockequipment.store>`
   - **Affected features:** Notify button in Waitlist & Arrival Alerts, quote confirmation emails, milestone update emails, invoice generated emails, 12-hour lock warning emails
 
 ---
@@ -20,8 +20,8 @@
   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase project settings |
   | `SUPABASE_SERVICE_ROLE_KEY` | From Supabase project settings |
   | `RESEND_API_KEY` | From resend.com/api-keys |
-  | `RESEND_FROM_EMAIL` | `onboarding@resend.dev` (pre-verification) → `BlueRock Equipment <notifications@bluerockequipment.com>` (post-verification) |
-  | `NEXT_PUBLIC_SITE_URL` | Production Vercel URL — must not be localhost |
+  | `RESEND_FROM_EMAIL` | `onboarding@resend.dev` (pre-verification) → `BlueRock Equipment <notifications@bluerockequipment.store>` (post-verification) |
+  | `NEXT_PUBLIC_SITE_URL` | `https://www.bluerockequipment.store` — must not be localhost |
   | `NEXT_PUBLIC_CALENDLY_URL` | Full Calendly event URL |
   | `ADMIN_EMAIL` | Email address of the admin Supabase account |
   | `NEXT_PUBLIC_BACKEND_URL` | `https://bluerock-equipment.onrender.com` |
@@ -68,7 +68,7 @@
 
 ## 7. Domain & Branding
 
-- [ ] **Connect custom domain** — Connect bluerockequipment.com to Vercel (optional but recommended before sharing with buyers)
+- [x] **Connect custom domain** — Connect bluerockequipment.store to Vercel (`www.bluerockequipment.store` is canonical; apex 308-redirects to it)
   - Go to Vercel → Project → Settings → Domains → Add Domain
   - Update `NEXT_PUBLIC_SITE_URL` env var to the custom domain after connecting
 

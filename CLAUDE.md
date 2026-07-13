@@ -273,13 +273,13 @@ CREATE POLICY "machines_public_read" ON machines
 - [ ] Build command must be plain `npm install` — **do not** use `apt-get install -y chromium-browser && npm install`. Confirmed 2026-07-11: Render's native build environment cannot run `apt-get` at all (`/var/lib/apt/lists` is read-only — a platform constraint, not a syntax problem). No sudo/permission workaround exists short of switching to a Docker-based Render deploy, which is out of scope
 - [ ] **`CHROMIUM_PATH` must be deleted from Render's environment variables entirely**, not just left unset in theory — if it's still set to `/usr/bin/chromium-browser` from the reverted apt-get attempt, that path doesn't exist and the code will use it directly and fail (no filesystem check, no graceful fallback — see Hard Constraint #5). Removing it lets the code fall through to `CHROMIUM_DOWNLOAD_URL`
 - [ ] Set `NODE_ENV=production` env var on Render
-- [ ] Set `ALLOWED_ORIGIN=https://bluerock-equipment.vercel.app` on Render
+- [ ] **PDF route CORS allow-list is not an env var** — `/api/pdf/*` origins are controlled directly in `server.js`'s `PDF_ALLOWED_ORIGINS` constant, not by an `ALLOWED_ORIGIN` environment variable (the CORS refactor in commit `2ffd006` hardcoded the allow-list in code; no env var is read for this anymore). Adding or changing an allowed origin requires editing `PDF_ALLOWED_ORIGINS` in `server.js` and redeploying Render — there is no dashboard setting for it
 - [ ] **New as of the 2026-07-10 Render revert:** set `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ADMIN_EMAIL` on Render — `server.js` now fetches machine/quote data and verifies admin identity itself, so it needs these the same way the Vercel API routes always did. Without them, `/api/pdf/*` will fail on every request. Not yet confirmed set as of this entry — check before relying on the endpoints in production.
 - [ ] Verify `/health` endpoint returns `{ "status": "ok" }`
 - [ ] Smoke-test both `/api/pdf/inspection-report` and `/api/pdf/proforma-invoice` against the **live** Render URL (not localhost) — local testing only exercises the local-Chrome code path, not the `chromium-min` cold-start path that actually runs in production
 
 ### Resend (Email)
-- [ ] Verify domain `bluerockequipment.com` in Resend dashboard (takes 48 hours DNS propagation)
+- [ ] Verify domain `bluerockequipment.store` in Resend dashboard (takes 48 hours DNS propagation)
 - [ ] Test a notification send from `/admin/buyers` → Notify button
 - [ ] Confirm "from" address matches verified domain
 
@@ -356,7 +356,10 @@ CREATE POLICY "machines_public_read" ON machines
 
 | Service | URL | Status |
 |---------|-----|--------|
-| Vercel Frontend | https://bluerock-equipment.vercel.app | ✅ |
+| Production Domain (canonical) | https://www.bluerockequipment.store | ✅ |
+| Vercel Frontend | https://bluerock-equipment.vercel.app (still live independently; custom domain points here) | ✅ |
 | Render Backend | https://bluerock-equipment.onrender.com | ✅ |
 | GitHub Repo | https://github.com/MikkyPrestige/bluerock-equipment | ✅ |
 | Supabase | bluerock-prod | ✅ |
+
+**Note (2026-07-12):** Custom domain `bluerockequipment.store` was connected to Vercel after initial launch prep — `www.bluerockequipment.store` is canonical, the apex 308-redirects to it. Confirmed live via the `server.js` PDF-route CORS allow-list (commit `2ffd006`), which was verified end-to-end against production. `bluerock-equipment.vercel.app` remains reachable and allow-listed alongside it.
