@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       .from('quotes')
       .select('id, machine_id, status, total_amount, lock_expires_at, created_at, port_of_discharge, machines(id, name, brand, model, price_usd)', { count: 'exact' })
       .eq('buyer_id', user.id)
-      .or(`status.in.(invoice_generated,buyer_accepted,payment_pending,payment_confirmed),and(status.eq.pending_quote,lock_expires_at.gt.${nowISO})`)
+      .or(`status.in.(invoice_generated,revision_requested,buyer_accepted,payment_pending,payment_confirmed),and(status.eq.pending_quote,lock_expires_at.gt.${nowISO})`)
       .order('created_at', { ascending: false })
       .range(0, QUOTE_PAGE_SIZE - 1),
 

@@ -8,11 +8,12 @@ import MilestoneTracker   from '@/components/quote/MilestoneTracker'
 import logo from '@/assests/img/logo.jpg'
 
 const QUOTE_STATUS: Record<string, { label: string; badge: string }> = {
-  pending_quote:     { label: 'Awaiting Quote',   badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
-  invoice_generated: { label: 'Proforma Ready',   badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  buyer_accepted:    { label: 'Accepted',          badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
-  payment_pending:   { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
-  payment_confirmed: { label: 'Payment Confirmed', badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
+  pending_quote:      { label: 'Awaiting Quote',    badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated:  { label: 'Proforma Ready',    badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  revision_requested: { label: 'Revision Requested', badge: 'bg-rose-500/20 border-rose-500/30 text-rose-400' },
+  buyer_accepted:     { label: 'Accepted',          badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
+  payment_pending:    { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed:  { label: 'Payment Confirmed', badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
 }
 
 type ActiveQuote = {
@@ -36,7 +37,7 @@ export default async function MilestoneTrackerPage() {
     .from('quotes')
     .select('id, status, milestone_phase, total_amount, created_at, machines(name, brand, model, price_usd)', { count: 'exact' })
     .eq('buyer_id', user.id)
-    .or(`status.in.(invoice_generated,buyer_accepted,payment_pending,payment_confirmed),and(status.eq.pending_quote,lock_expires_at.gt.${nowISO})`)
+    .or(`status.in.(invoice_generated,revision_requested,buyer_accepted,payment_pending,payment_confirmed),and(status.eq.pending_quote,lock_expires_at.gt.${nowISO})`)
     .order('created_at', { ascending: false })
 
   const quotes = (rawQuotes ?? []) as unknown as ActiveQuote[]

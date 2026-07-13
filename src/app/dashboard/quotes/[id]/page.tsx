@@ -5,16 +5,18 @@ import Link from 'next/link'
 import Image from 'next/image'
 import MilestoneTracker from '@/components/quote/MilestoneTracker'
 import DocumentVault    from '@/components/quote/DocumentVault'
+import InvoiceReviewActions from '@/components/quote/InvoiceReviewActions'
 import logo             from '@/assests/img/logo.jpg'
 
 const STATUS: Record<string, { label: string; badge: string }> = {
-  pending_quote:     { label: 'Awaiting Quote',   badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
-  invoice_generated: { label: 'Proforma Ready',   badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  buyer_accepted:    { label: 'Accepted',          badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
-  payment_pending:   { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
-  payment_confirmed: { label: 'Payment Confirmed', badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
-  sold:              { label: 'Sold',              badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
-  cancelled:         { label: 'Cancelled',         badge: 'bg-white/8 border-white/12 text-white/30' },
+  pending_quote:      { label: 'Awaiting Quote',      badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated:  { label: 'Proforma Ready',       badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  revision_requested: { label: 'Revision Requested',   badge: 'bg-rose-500/20 border-rose-500/30 text-rose-400' },
+  buyer_accepted:     { label: 'Accepted',             badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
+  payment_pending:    { label: 'Payment Pending',      badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed:  { label: 'Payment Confirmed',    badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
+  sold:               { label: 'Sold',                 badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled:          { label: 'Cancelled',             badge: 'bg-white/8 border-white/12 text-white/30' },
 }
 
 export default async function BuyerQuoteDetailPage({
@@ -39,7 +41,7 @@ export default async function BuyerQuoteDetailPage({
 
   const DOC_PAGE_SIZE = 10
 
-  const [{ data: documents }, { count: totalDocCount }] = await Promise.all([
+  const [{ data: documents }, { count: totalDocCount }, { data: currentProforma }] = await Promise.all([
     adminSupabase
       .from('documents')
       .select('id, document_type, version, file_path, superseded_at, created_at')
@@ -51,6 +53,14 @@ export default async function BuyerQuoteDetailPage({
       .from('documents')
       .select('id', { count: 'exact', head: true })
       .eq('quote_id', id),
+    adminSupabase
+      .from('documents')
+      .select('id')
+      .eq('quote_id', id)
+      .eq('document_type', 'proforma')
+      .is('superseded_at', null)
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const m = quote.machines as {
@@ -157,6 +167,19 @@ export default async function BuyerQuoteDetailPage({
             </div>
           </div>
         </div>
+
+        {/* Invoice Review — Accept / Request Revision */}
+        {(quote.status === 'invoice_generated' || quote.status === 'revision_requested') && (
+          <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">
+            <p className="text-xs font-bold text-white/35 uppercase tracking-widest mb-4">Invoice Review</p>
+            <InvoiceReviewActions
+              quoteId={id}
+              status={quote.status}
+              revisionReason={quote.revision_reason}
+              proformaDocumentId={currentProforma?.id ?? null}
+            />
+          </div>
+        )}
 
         {/* Milestone Tracker */}
         <div className="bg-navy-900 border border-white/8 rounded-2xl p-5 sm:p-6">

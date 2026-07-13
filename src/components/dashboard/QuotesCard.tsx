@@ -30,16 +30,17 @@ interface Props {
 const PAGE_SIZE = 10
 
 const QUOTE_STATUS: Record<string, { label: string; badge: string }> = {
-  pending_quote:     { label: 'Awaiting Quote',    badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
-  invoice_generated: { label: 'Proforma Ready',    badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  buyer_accepted:    { label: 'Accepted',           badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
-  payment_pending:   { label: 'Payment Pending',    badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
-  payment_confirmed: { label: 'Payment Confirmed',  badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
-  sold:              { label: 'Sold',               badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
-  cancelled:         { label: 'Cancelled',          badge: 'bg-white/8 border-white/12 text-white/30' },
+  pending_quote:      { label: 'Awaiting Quote',     badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated:  { label: 'Proforma Ready',      badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  revision_requested: { label: 'Revision Requested',  badge: 'bg-rose-500/20 border-rose-500/30 text-rose-400' },
+  buyer_accepted:     { label: 'Accepted',            badge: 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' },
+  payment_pending:    { label: 'Payment Pending',     badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed:  { label: 'Payment Confirmed',   badge: 'bg-teal-500/20 border-teal-500/30 text-teal-400' },
+  sold:               { label: 'Sold',                badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled:          { label: 'Cancelled',           badge: 'bg-white/8 border-white/12 text-white/30' },
 }
 
-const REMOVABLE_STATUSES   = new Set(['pending_quote', 'invoice_generated', 'buyer_accepted'])
+const REMOVABLE_STATUSES   = new Set(['pending_quote', 'invoice_generated', 'revision_requested', 'buyer_accepted'])
 const CONTACT_ADMIN_STATUS = new Set(['payment_pending', 'payment_confirmed'])
 
 function lockColor(h: number) {
@@ -117,7 +118,7 @@ export default function QuotesCard({
       const { data } = await supabase
         .from('quotes')
         .select('id, machine_id, status, total_amount, lock_expires_at, created_at, port_of_discharge, machines(id, name, brand, model, price_usd)')
-        .or(`status.in.(invoice_generated,buyer_accepted,payment_pending,payment_confirmed),and(status.eq.pending_quote,lock_expires_at.gt.${nowISO})`)
+        .or(`status.in.(invoice_generated,revision_requested,buyer_accepted,payment_pending,payment_confirmed),and(status.eq.pending_quote,lock_expires_at.gt.${nowISO})`)
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
       if (data) { setActiveRows(data as unknown as QuoteRow[]); setActivePage(page) }

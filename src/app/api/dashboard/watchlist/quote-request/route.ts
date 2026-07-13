@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     .select('machine_id')
     .eq('buyer_id', user.id)
     .in('machine_id', machine_ids)
-    .in('status', ['pending_quote', 'invoice_generated', 'buyer_accepted', 'payment_pending', 'payment_confirmed'])
+    .in('status', ['pending_quote', 'invoice_generated', 'revision_requested', 'buyer_accepted', 'payment_pending', 'payment_confirmed'])
 
   const alreadyQuoted = new Set((existingQuotes ?? []).map(q => q.machine_id as string))
 

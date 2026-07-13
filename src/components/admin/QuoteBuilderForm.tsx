@@ -4,7 +4,8 @@ import { useState } from 'react'
 
 interface QuoteBuilderFormProps {
   quoteId: string
-  initialFreight: number | null
+  initialFreightEstimate: number | null
+  initialFinalFreightCost: number | null
   initialCustoms: number | null
   initialTotal: number | null
   machinePrice: number
@@ -20,12 +21,13 @@ const LBL = 'block text-[10px] font-bold text-white/35 uppercase tracking-widest
 
 export default function QuoteBuilderForm({
   quoteId,
-  initialFreight,
+  initialFreightEstimate,
+  initialFinalFreightCost,
   initialCustoms,
   initialTotal,
   machinePrice,
 }: QuoteBuilderFormProps) {
-  const [freight, setFreight] = useState(initialFreight?.toString() ?? '')
+  const [freight, setFreight] = useState(initialFinalFreightCost?.toString() ?? '')
   const [customs, setCustoms] = useState(initialCustoms?.toString() ?? '')
   const [total, setTotal]     = useState(initialTotal?.toString() ?? '')
   const [state, setState]     = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
@@ -42,10 +44,14 @@ export default function QuoteBuilderForm({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          freight_estimate: freight ? parseFloat(freight) : null,
-          customs_fee:      customs ? parseFloat(customs) : null,
-          total_amount:     total   ? parseFloat(total)   : null,
+          final_freight_cost: freight ? parseFloat(freight) : null,
+          customs_fee:        customs ? parseFloat(customs) : null,
+          total_amount:       total   ? parseFloat(total)   : null,
           status: 'invoice_generated',
+          // Clears any stale ask from a prior revision-request cycle — this
+          // save is what puts the quote back in front of the buyer, so an
+          // old reason must not linger once it's been acted on.
+          revision_reason: null,
         }),
         credentials: 'include',
       })
@@ -71,14 +77,19 @@ export default function QuoteBuilderForm({
           <p className="text-[10px] text-white/25 mt-1">Fixed — from inventory</p>
         </div>
 
-        {/* Freight */}
+        {/* Final Freight Cost */}
         <div>
-          <label className={LBL}>Freight Estimate (USD)</label>
+          <label className={LBL}>Final Freight Cost (USD)</label>
           <input
             type="number" min="0" step="0.01"
             value={freight} onChange={e => setFreight(e.target.value)}
             placeholder="0.00" className={INP}
           />
+          <p className="text-[10px] text-white/25 mt-1.5">
+            {initialFreightEstimate
+              ? `Original estimate at request time: $${Number(initialFreightEstimate).toLocaleString()}`
+              : 'No original estimate on file for this quote.'}
+          </p>
         </div>
 
         {/* Customs */}

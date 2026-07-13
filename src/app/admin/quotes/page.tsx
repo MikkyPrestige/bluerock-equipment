@@ -9,13 +9,14 @@ import logo from '@/assests/img/logo.jpg'
 
 /* ── Status badge (dark-adapted) ── */
 const STATUS: Record<string, { label: string; badge: string }> = {
-  pending_quote:     { label: 'Pending Quote',     badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
-  invoice_generated: { label: 'Invoice Generated', badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  buyer_accepted:    { label: 'Buyer Accepted',    badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  payment_pending:   { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
-  payment_confirmed: { label: 'Payment Confirmed', badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
-  sold:              { label: 'Sold',              badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
-  cancelled:         { label: 'Cancelled',         badge: 'bg-white/8 border-white/12 text-white/30' },
+  pending_quote:      { label: 'Pending Quote',      badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated:  { label: 'Invoice Generated',  badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  revision_requested: { label: 'Revision Requested', badge: 'bg-rose-500/20 border-rose-500/30 text-rose-400' },
+  buyer_accepted:     { label: 'Buyer Accepted',     badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  payment_pending:    { label: 'Payment Pending',    badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed:  { label: 'Payment Confirmed',  badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  sold:               { label: 'Sold',               badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled:          { label: 'Cancelled',          badge: 'bg-white/8 border-white/12 text-white/30' },
 }
 
 /* ── Admin sub-nav tabs ── */
@@ -61,8 +62,8 @@ export default async function AdminQuotesPage({
       ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).not('archived_at', 'is', null)
       : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).is('archived_at', null),
     showArchived
-      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote').not('archived_at', 'is', null)
-      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote').is('archived_at', null),
+      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending_quote', 'revision_requested']).not('archived_at', 'is', null)
+      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).in('status', ['pending_quote', 'revision_requested']).is('archived_at', null),
     showArchived
       ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled').not('archived_at', 'is', null)
       : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled').is('archived_at', null),

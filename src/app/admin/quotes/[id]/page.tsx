@@ -14,13 +14,14 @@ import DocumentLedger     from '@/components/admin/DocumentLedger'
 
 /* ── Status badge map ── */
 const STATUS: Record<string, { label: string; badge: string }> = {
-  pending_quote:     { label: 'Pending Quote',     badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
-  invoice_generated: { label: 'Invoice Generated', badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  buyer_accepted:    { label: 'Buyer Accepted',    badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
-  payment_pending:   { label: 'Payment Pending',   badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
-  payment_confirmed: { label: 'Payment Confirmed', badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
-  sold:              { label: 'Sold',              badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
-  cancelled:         { label: 'Cancelled',         badge: 'bg-white/8 border-white/12 text-white/30' },
+  pending_quote:      { label: 'Pending Quote',      badge: 'bg-amber-500/20 border-amber-500/30 text-amber-400' },
+  invoice_generated:  { label: 'Invoice Generated',  badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  revision_requested: { label: 'Revision Requested', badge: 'bg-rose-500/20 border-rose-500/30 text-rose-400' },
+  buyer_accepted:     { label: 'Buyer Accepted',     badge: 'bg-blue-500/20 border-blue-500/30 text-blue-400' },
+  payment_pending:    { label: 'Payment Pending',    badge: 'bg-orange-500/20 border-orange-500/30 text-orange-400' },
+  payment_confirmed:  { label: 'Payment Confirmed',  badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  sold:               { label: 'Sold',               badge: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' },
+  cancelled:          { label: 'Cancelled',          badge: 'bg-white/8 border-white/12 text-white/30' },
 }
 
 /* ── Tier badge ── */
@@ -253,11 +254,27 @@ export default async function AdminQuoteDetailPage({
           </div>
         </Section>
 
+        {/* ── REVISION REQUESTED BANNER ── */}
+        {quote.status === 'revision_requested' && (
+          <div className="bg-rose-500/8 border border-rose-500/25 rounded-2xl p-5 sm:p-6">
+            <p className="text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">
+              Buyer Requested a Revision
+            </p>
+            <p className="text-white/70 text-sm leading-relaxed whitespace-pre-line">
+              {quote.revision_reason || 'No reason was provided.'}
+            </p>
+            <p className="text-[11px] text-white/30 mt-3">
+              Adjust pricing below and save — this returns the quote to Invoice Generated so the buyer can review it again.
+            </p>
+          </div>
+        )}
+
         {/* ── QUOTE BUILDER ── */}
         <Section title="Quote Builder — Set Pricing">
           <QuoteBuilderForm
             quoteId={id}
-            initialFreight={quote.freight_estimate}
+            initialFreightEstimate={quote.freight_estimate}
+            initialFinalFreightCost={quote.final_freight_cost}
             initialCustoms={quote.customs_fee}
             initialTotal={quote.total_amount}
             machinePrice={Number(m.price_usd)}
