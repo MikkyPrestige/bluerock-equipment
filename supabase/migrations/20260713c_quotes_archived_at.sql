@@ -1,0 +1,24 @@
+-- Add archive/hide capability for admin on quotes, without any hard delete.
+-- Run this in the Supabase SQL editor (project: bluerock-prod), same manual
+-- process as the two prior quotes migrations this session — no
+-- supabase/migrations pipeline exists yet in this project.
+--
+-- archived_at follows the exact same soft-delete convention already used by
+-- documents.superseded_at: nullable timestamptz, NULL means "active/visible
+-- by default", a non-null timestamp means "hidden from the admin's default
+-- list view but still fully present and reachable." Fully reversible — set
+-- back to NULL to unarchive, same as documents versioning never deletes a
+-- superseded row.
+--
+-- Deliberately orthogonal to quotes.status: archiving is an admin
+-- view-declutter action, not a transactional state. An admin can archive a
+-- quote in any status, including a fully active one, purely to get it out of
+-- their own default list view — it implies nothing about the underlying
+-- transaction. This column plays no part in
+-- enforce_quote_status_phase_consistency() and is never read or written by
+-- that trigger — archiving only ever touches archived_at, never status or
+-- milestone_phase, so it can't trip the consistency checks added in the two
+-- prior quotes migrations. It also doesn't cascade to documents,
+-- notifications, or storage — those all key off quote_id/buyer_id and are
+-- untouched by this column.
+alter table quotes add column if not exists archived_at timestamptz default null;

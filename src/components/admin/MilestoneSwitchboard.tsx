@@ -12,9 +12,11 @@ export default function MilestoneSwitchboard({
 }) {
   const [phase, setPhase] = useState(currentPhase)
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [errMsg, setErrMsg] = useState('')
 
   async function savePhase(newPhase: number) {
     setState('saving')
+    setErrMsg('')
     try {
       const res = await fetch(`/api/admin/quotes/${quoteId}`, {
         method: 'PATCH',
@@ -22,11 +24,17 @@ export default function MilestoneSwitchboard({
         body: JSON.stringify({ milestone_phase: newPhase }),
         credentials: 'include',
       })
-      if (!res.ok) { setState('error'); return }
+      if (!res.ok) {
+        const json = await res.json().catch(() => null)
+        setErrMsg(json?.error || 'Failed to update phase. Please try again.')
+        setState('error')
+        return
+      }
       setPhase(newPhase)
       setState('saved')
       setTimeout(() => setState('idle'), 2500)
     } catch {
+      setErrMsg('Network error — please try again.')
       setState('error')
     }
   }
@@ -91,7 +99,7 @@ export default function MilestoneSwitchboard({
       )}
       {state === 'error' && (
         <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg">
-          Failed to update phase. Please try again.
+          {errMsg}
         </p>
       )}
     </div>

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import AdminMobileNav from '@/components/AdminMobileNav'
+import ArchiveQuoteButton from '@/components/admin/ArchiveQuoteButton'
 import logo from '@/assests/img/logo.jpg'
 
 /* ── Status badge (dark-adapted) ── */
@@ -33,39 +34,64 @@ const PAGE_SIZE = 10
 export default async function AdminQuotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ page?: string; archived?: string }>
 }) {
   const params = await searchParams
   const page = Math.max(1, parseInt(params.page ?? '1', 10))
   const offset = (page - 1) * PAGE_SIZE
+  const showArchived = params.archived === '1'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== process.env.ADMIN_EMAIL) redirect('/auth/login')
 
+  // Archiving is purely an admin view-declutter concern, orthogonal to
+  // status — every count and the list itself are scoped to whichever view
+  // (active vs archived) is currently selected, so stats and pagination
+  // never mix the two.
   const [
     { count: totalCount },
     { count: pendingCount },
     { count: activeCount },
     { count: completeCount },
+    { count: archivedCount },
     { data: quotes },
   ] = await Promise.all([
-    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }),
-    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote'),
-    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled'),
-    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sold'),
-    adminSupabase
-      .from('quotes')
-      .select('*, machines(name, brand, model, price_usd), buyers(company_name, email)')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1),
+    showArchived
+      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).not('archived_at', 'is', null)
+      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).is('archived_at', null),
+    showArchived
+      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote').not('archived_at', 'is', null)
+      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'pending_quote').is('archived_at', null),
+    showArchived
+      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled').not('archived_at', 'is', null)
+      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sold').neq('status', 'cancelled').is('archived_at', null),
+    showArchived
+      ? adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sold').not('archived_at', 'is', null)
+      : adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).eq('status', 'sold').is('archived_at', null),
+    adminSupabase.from('quotes').select('*', { count: 'exact', head: true }).not('archived_at', 'is', null),
+    showArchived
+      ? adminSupabase
+          .from('quotes')
+          .select('*, machines(name, brand, model, price_usd), buyers(company_name, email)')
+          .not('archived_at', 'is', null)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1)
+      : adminSupabase
+          .from('quotes')
+          .select('*, machines(name, brand, model, price_usd), buyers(company_name, email)')
+          .is('archived_at', null)
+          .order('created_at', { ascending: false })
+          .range(offset, offset + PAGE_SIZE - 1),
   ])
 
   const total      = totalCount    ?? 0
   const pending    = pendingCount  ?? 0
   const active     = activeCount   ?? 0
   const complete   = completeCount ?? 0
+  const archived   = archivedCount ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pageQuery  = showArchived ? '&archived=1' : ''
 
   return (
     <div className="min-h-screen bg-navy-950 flex flex-col">
@@ -127,8 +153,8 @@ export default async function AdminQuotesPage({
         {/* ── STATS BAR ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Quotes',  value: total    },
-            { label: 'Needs Action',  value: pending,  urgent: pending > 0 },
+            { label: showArchived ? 'Archived Quotes' : 'Total Quotes', value: total },
+            { label: 'Needs Action',  value: pending,  urgent: !showArchived && pending > 0 },
             { label: 'Active',        value: active    },
             { label: 'Completed',     value: complete  },
           ].map(({ label, value, urgent }) => (
@@ -148,12 +174,37 @@ export default async function AdminQuotesPage({
           ))}
         </div>
 
+        {/* ── ARCHIVED VIEW TOGGLE ── */}
+        <div className="flex items-center justify-end">
+          {showArchived ? (
+            <Link
+              href="/admin/quotes"
+              className="text-xs font-semibold text-gold-400 hover:text-gold-300 transition-colors duration-150"
+            >
+              ← Back to Active Quotes
+            </Link>
+          ) : (
+            <Link
+              href="/admin/quotes?archived=1"
+              className="text-xs font-semibold text-white/35 hover:text-white/65 transition-colors duration-150"
+            >
+              View Archived ({archived})
+            </Link>
+          )}
+        </div>
+
         {/* ── EMPTY STATE ── */}
         {total === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-32">
             <div className="text-white/10 text-7xl mb-6">📋</div>
-            <p className="text-white/35 text-base mb-2">No quotes yet.</p>
-            <p className="text-white/20 text-sm">Quote requests from buyers will appear here.</p>
+            <p className="text-white/35 text-base mb-2">
+              {showArchived ? 'No archived quotes.' : 'No quotes yet.'}
+            </p>
+            <p className="text-white/20 text-sm">
+              {showArchived
+                ? 'Quotes you archive to declutter this view will show up here.'
+                : 'Quote requests from buyers will appear here.'}
+            </p>
           </div>
         ) : (
           /* ── TABLE ── */
@@ -259,12 +310,15 @@ export default async function AdminQuotesPage({
 
                         {/* Actions */}
                         <td className="px-5 py-4">
-                          <Link
-                            href={`/admin/quotes/${q.id}`}
-                            className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors duration-150"
-                          >
-                            Open →
-                          </Link>
+                          <div className="flex items-center gap-3">
+                            <Link
+                              href={`/admin/quotes/${q.id}`}
+                              className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors duration-150"
+                            >
+                              Open →
+                            </Link>
+                            <ArchiveQuoteButton quoteId={q.id} archived={!!q.archived_at} />
+                          </div>
                         </td>
                       </tr>
                     )
@@ -276,9 +330,9 @@ export default async function AdminQuotesPage({
             {/* Table footer */}
             <div className="px-5 py-3 border-t border-white/6 flex items-center justify-between">
               <p className="text-[11px] text-white/25">
-                {total} quote{total !== 1 ? 's' : ''} total
+                {total} {showArchived ? 'archived ' : ''}quote{total !== 1 ? 's' : ''} total
               </p>
-              {pending > 0 && (
+              {!showArchived && pending > 0 && (
                 <p className="text-[11px] text-amber-400 font-semibold">
                   {pending} awaiting your response
                 </p>
@@ -287,7 +341,7 @@ export default async function AdminQuotesPage({
             {total >= 5 && (
               <div className="flex items-center justify-between px-5 py-3.5 border-t border-white/6">
                 <Link
-                  href={`/admin/quotes?page=${page - 1}`}
+                  href={`/admin/quotes?page=${page - 1}${pageQuery}`}
                   aria-disabled={page <= 1}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
                     page <= 1
@@ -302,7 +356,7 @@ export default async function AdminQuotesPage({
                   <span className="text-white/55 font-semibold">{totalPages}</span>
                 </p>
                 <Link
-                  href={`/admin/quotes?page=${page + 1}`}
+                  href={`/admin/quotes?page=${page + 1}${pageQuery}`}
                   aria-disabled={page >= totalPages}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all duration-150 ${
                     page >= totalPages

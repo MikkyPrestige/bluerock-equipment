@@ -29,6 +29,25 @@ export async function PATCH(
     .single()
 
   if (error) {
+    // BR001 = enforce_quote_status_phase_consistency() rejecting a
+    // milestone_phase value the quote's current status doesn't support yet
+    // (supabase/migrations/20260713_quotes_status_phase_integrity_and_atomic_lock.sql,
+    // tagged with USING ERRCODE in 20260713b_quotes_phase_exceeded_errcode.sql).
+    // This is a legitimate rule being enforced, not a server error — tell the
+    // admin what actually happened instead of a generic failure.
+    if (error.code === 'BR001') {
+      const { data: current } = await adminSupabase
+        .from('quotes')
+        .select('status')
+        .eq('id', id)
+        .single()
+      const statusLabel = (current?.status ?? 'unknown').replace(/_/g, ' ')
+      const phaseText = typeof body.milestone_phase === 'number' ? `Phase ${body.milestone_phase}` : 'This phase'
+      return NextResponse.json(
+        { error: `${phaseText} can't be set yet — the quote's status is still "${statusLabel}," which doesn't support it. Advance the status first.` },
+        { status: 409 }
+      )
+    }
     console.error('[admin/quotes/patch]', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
