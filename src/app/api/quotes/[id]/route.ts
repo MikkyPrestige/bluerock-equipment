@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminSupabase } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { ACTIVE_QUOTE_STATUSES } from '@/lib/milestones'
 
 export async function PATCH(
   _request: NextRequest,
@@ -21,15 +22,22 @@ export async function PATCH(
   if (fetchErr || !quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
   if (quote.buyer_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  /* If pending_quote, release machine back to available when it's still pending_hold */
-  if (quote.status === 'pending_quote') {
+  // Release the machine whenever cancelling from ANY status that still
+  // holds it — not just pending_quote. REMOVABLE_STATUSES in QuotesCard
+  // already lets a buyer cancel from invoice_generated, revision_requested,
+  // and buyer_accepted too; checking only pending_quote here left the
+  // machine stranded at pending_hold forever in exactly those cases — the
+  // confirmed root cause behind three machines found stuck in production.
+  // Mirrors the same ACTIVE_QUOTE_STATUSES check the admin Holds/Watchdog
+  // release action uses.
+  if ((ACTIVE_QUOTE_STATUSES as readonly string[]).includes(quote.status)) {
     const { data: machine } = await adminSupabase
       .from('machines')
       .select('id, status')
       .eq('id', quote.machine_id)
       .single()
 
-    if (machine?.status === 'pending_hold') {
+    if (machine?.status === 'pending_hold' || machine?.status === 'reserved') {
       await adminSupabase
         .from('machines')
         .update({ status: 'available', updated_at: new Date().toISOString() })

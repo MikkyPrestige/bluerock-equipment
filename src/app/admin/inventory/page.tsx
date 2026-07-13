@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import GenerateReportButton from '@/components/admin/GenerateReportButton'
+import ReenlistMachineButton from '@/components/admin/ReenlistMachineButton'
 import AdminMobileNav from '@/components/AdminMobileNav'
 import logo from '@/assests/img/logo.jpg'
 
@@ -23,6 +24,7 @@ const TABS = [
   { label: 'Quotes',       href: '/admin/quotes' },
   { label: 'Buyers',       href: '/admin/buyers' },
   { label: 'Waitlist',     href: '/admin/waitlist' },
+  { label: 'Holds',        href: '/admin/holds' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
   { label: 'Support',      href: '/admin/support' },
@@ -222,6 +224,9 @@ export default async function AdminInventoryPage({
                             hasReport={!!machine.inspection_report_url}
                             reportUrl={machine.inspection_report_url}
                           />
+                          {machine.status === 'sold' && (
+                            <ReenlistMachineButton machineId={machine.id} />
+                          )}
                         </div>
                       </td>
                     </tr>

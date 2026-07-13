@@ -25,6 +25,7 @@ const TABS = [
   { label: 'Quotes',       href: '/admin/quotes' },
   { label: 'Buyers',       href: '/admin/buyers' },
   { label: 'Waitlist',     href: '/admin/waitlist' },
+  { label: 'Holds',        href: '/admin/holds' },
   { label: 'Walkthroughs', href: '/admin/walkthroughs' },
   { label: 'Freight',      href: '/admin/freight-rates' },
   { label: 'Support',      href: '/admin/support' },
