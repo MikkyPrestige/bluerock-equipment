@@ -11,54 +11,31 @@ export async function POST(request: NextRequest) {
   if (!machine_id) return NextResponse.json({ error: 'machine_id required' }, { status: 400 })
   if (!port_of_discharge?.trim()) return NextResponse.json({ error: 'port_of_discharge required' }, { status: 400 })
 
-  const { data: machine } = await adminSupabase
-    .from('machines')
-    .select('id, status, name')
-    .eq('id', machine_id)
-    .single()
-
-  if (!machine) return NextResponse.json({ error: 'Machine not found' }, { status: 404 })
-  if (machine.status !== 'available') {
-    return NextResponse.json({ error: 'Machine is not currently available for quoting' }, { status: 409 })
-  }
-
-  // Prevent duplicate active quotes from the same buyer for this machine
-  const { data: existing } = await adminSupabase
-    .from('quotes')
-    .select('id')
-    .eq('buyer_id', user.id)
-    .eq('machine_id', machine_id)
-    .in('status', ['pending_quote', 'invoice_generated', 'buyer_accepted', 'payment_pending', 'payment_confirmed'])
-    .limit(1)
-
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ error: 'You already have an active quote for this machine' }, { status: 409 })
-  }
-
-  const lock_expires_at = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
-
-  const { data: quote, error: qErr } = await adminSupabase
-    .from('quotes')
-    .insert({
-      buyer_id: user.id,
-      machine_id,
-      status: 'pending_quote',
-      port_of_discharge: port_of_discharge.trim(),
-      lock_expires_at,
-      milestone_phase: 0,
+  // Machine-availability check, buyer-duplicate check, quote insert, and
+  // machine lock all happen atomically inside create_quote_with_lock — see
+  // supabase/migrations/20260713_quotes_status_phase_integrity_and_atomic_lock.sql.
+  // Two concurrent requests for the same machine can no longer both pass a
+  // stale availability check before either write lands.
+  const { data: quote, error } = await adminSupabase
+    .rpc('create_quote_with_lock', {
+      p_buyer_id: user.id,
+      p_machine_id: machine_id,
+      p_port: port_of_discharge.trim(),
     })
-    .select()
-    .single()
 
-  if (qErr) {
-    console.error('[quotes/create]', qErr)
+  if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'You already have an active quote for this machine' }, { status: 409 })
+    }
+    if (error.message?.includes('Machine not found')) {
+      return NextResponse.json({ error: 'Machine not found' }, { status: 404 })
+    }
+    if (error.message?.includes('Machine is not available')) {
+      return NextResponse.json({ error: 'Machine is not currently available for quoting' }, { status: 409 })
+    }
+    console.error('[quotes/create]', error)
     return NextResponse.json({ error: 'Failed to create quote' }, { status: 500 })
   }
-
-  await adminSupabase
-    .from('machines')
-    .update({ status: 'pending_hold', updated_at: new Date().toISOString() })
-    .eq('id', machine_id)
 
   return NextResponse.json({ quote }, { status: 201 })
 }
