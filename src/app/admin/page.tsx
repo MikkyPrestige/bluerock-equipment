@@ -39,6 +39,14 @@ const NAV = [
     secondary: null,
   },
   {
+    href: '/admin/holds',
+    label: 'Holds',
+    tag: 'Fleet',
+    desc: 'See every machine locked in pending_hold or reserved and release stuck holds without waiting on the buyer',
+    primary: { label: 'Open Holds', href: '/admin/holds' },
+    secondary: null,
+  },
+  {
     href: '/admin/walkthroughs',
     label: 'Walkthroughs',
     tag: 'Schedule',
