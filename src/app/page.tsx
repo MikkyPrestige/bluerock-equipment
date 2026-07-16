@@ -21,12 +21,12 @@ const STATS = [
 ]
 
 const CATEGORIES = [
-  { name: 'Excavators', slug: 'Excavator', image: excImg, desc: 'Mining, quarry & civil works' },
-  { name: 'Bulldozers', slug: 'Bulldozer', image: bullImg, desc: 'Earthmoving & land clearing' },
-  { name: 'Wheel Loaders', slug: 'Wheel Loader', image: loaderImg, desc: 'Material handling & loading' },
-  { name: 'Motor Graders', slug: 'Motor Grader', image: graderImg, desc: 'Road grading & leveling' },
-  { name: 'Articulated Trucks', slug: 'Articulated Truck', image: truckImg, desc: 'Heavy haulage & site transport' },
-  { name: 'Compactors', slug: 'Compactor', image: compactorImg, desc: 'Soil & asphalt compaction' },
+  { name: 'Excavators', slug: 'Excavators', image: excImg, desc: 'Mining, quarry & civil works' },
+  { name: 'Bulldozers', slug: 'Bulldozers', image: bullImg, desc: 'Earthmoving & land clearing' },
+  { name: 'Wheel Loaders', slug: 'Wheel Loaders', image: loaderImg, desc: 'Material handling & loading' },
+  { name: 'Motor Graders', slug: 'Motor Graders', image: graderImg, desc: 'Road grading & leveling' },
+  { name: 'Articulated Trucks', slug: 'Articulated Trucks', image: truckImg, desc: 'Heavy haulage & site transport' },
+  { name: 'Compactors', slug: 'Compactors', image: compactorImg, desc: 'Soil & asphalt compaction' },
 ]
 
 const HOW_IT_WORKS = [

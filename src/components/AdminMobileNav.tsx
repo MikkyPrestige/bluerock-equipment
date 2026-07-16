@@ -34,18 +34,16 @@ export default function AdminMobileNav() {
       {/* Backdrop */}
       <div
         onClick={() => setOpen(false)}
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
         style={{ zIndex: 9998 }}
         aria-hidden="true"
       />
 
       {/* Panel — slides in from right */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 max-w-[85vw] bg-navy-950 border-l border-white/10 flex flex-col shadow-2xl transition-transform duration-300 ease-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full w-72 max-w-[85vw] bg-navy-950 border-l border-white/10 flex flex-col shadow-2xl transition-transform duration-300 ease-out ${open ? 'translate-x-0' : 'translate-x-full'
+          }`}
         style={{ zIndex: 9999 }}
       >
         {/* Header */}
@@ -117,6 +115,18 @@ export default function AdminMobileNav() {
               <circle cx="16" cy="14" r="3" />
             </svg>
             Waitlist
+          </Link>
+
+          <Link
+            href="/admin/holds"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-3 py-3 text-sm text-white/70 hover:text-white hover:bg-white/6 rounded-xl transition-colors duration-150"
+          >
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">
+              <path d="M4 6h12M4 10h8M4 14h5" />
+              <circle cx="16" cy="14" r="3" />
+            </svg>
+            Holds
           </Link>
 
           <Link

@@ -116,8 +116,8 @@ export default async function MachinesPage({
     )
   }
 
-  let watchlistedIds = new Set<string>()
-  let comparisonIds  = new Set<string>()
+  const watchlistedIds = new Set<string>()
+  const comparisonIds  = new Set<string>()
   if (user) {
     const { data: wl } = await adminSupabase
       .from('watchlist')
